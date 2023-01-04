@@ -1,5 +1,5 @@
 [package]
-name = "client"
+name = "proto"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,4 +7,7 @@ edition = "2021"
 
 [dependencies]
 tonic.workspace = true
-proto = { path = "../proto" }
+prost.workspace = true
+
+[build-dependencies]
+tonic-build.workspace = true

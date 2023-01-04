@@ -1,2 +1,34 @@
 syntax = "proto3";
 package file;
+
+service FileService {
+  rpc DownloadFile(DownloadFileRequest) returns (stream DownloadFileResponse);
+  rpc UploadFile(stream UploadFilesRequest) returns (stream UploadFilesResponse);
+  rpc ListFiles(ListFilesRequest) returns (stream ListFilesResponse);
+}
+
+message DownloadFileRequest {
+  string name = 1;
+}
+
+message DownloadFileResponse {
+  bytes chunk = 1;
+}
+
+message ListFilesRequest {
+}
+
+message ListFilesResponse {
+  string name = 1;
+  uint64 size = 2;
+}
+
+message UploadFilesRequest {
+  oneof type {
+    string name = 1;
+    bytes chunk = 2;
+  }
+}
+
+message UploadFilesResponse {
+}

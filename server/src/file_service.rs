@@ -1,7 +1,7 @@
 use proto::api::file_service_server::FileService;
 use proto::api::{
     DownloadFileRequest, DownloadFileResponse, ListFilesRequest, ListFilesResponse,
-    UploadFilesRequest, UploadFilesResponse,
+    UploadFileRequest, UploadFileResponse,
 };
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status, Streaming};
@@ -12,7 +12,6 @@ pub struct FileServiceImpl;
 #[tonic::async_trait]
 impl FileService for FileServiceImpl {
     type DownloadFileStream = ReceiverStream<Result<DownloadFileResponse, Status>>;
-    type UploadFileStream = ReceiverStream<Result<UploadFilesResponse, Status>>;
     type ListFilesStream = ReceiverStream<Result<ListFilesResponse, Status>>;
 
     async fn download_file(
@@ -23,8 +22,8 @@ impl FileService for FileServiceImpl {
     }
     async fn upload_file(
         &self,
-        request: Request<Streaming<UploadFilesRequest>>,
-    ) -> Result<Response<Self::UploadFileStream>, Status> {
+        request: Request<Streaming<UploadFileRequest>>,
+    ) -> Result<Response<UploadFileResponse>, Status> {
         unimplemented!()
     }
     async fn list_files(

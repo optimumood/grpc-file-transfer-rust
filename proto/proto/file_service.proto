@@ -3,7 +3,7 @@ package file;
 
 service FileService {
   rpc DownloadFile(DownloadFileRequest) returns (stream DownloadFileResponse);
-  rpc UploadFile(stream UploadFilesRequest) returns (stream UploadFilesResponse);
+  rpc UploadFile(stream UploadFileRequest) returns (UploadFileResponse);
   rpc ListFiles(ListFilesRequest) returns (stream ListFilesResponse);
 }
 
@@ -23,12 +23,12 @@ message ListFilesResponse {
   uint64 size = 2;
 }
 
-message UploadFilesRequest {
+message UploadFileRequest {
   oneof type {
     string name = 1;
     bytes chunk = 2;
   }
 }
 
-message UploadFilesResponse {
+message UploadFileResponse {
 }

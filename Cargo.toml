@@ -4,6 +4,7 @@ members = [
     "proto",
     "client",
     "server",
+    "e2e_tests",
 ]
 
 [workspace.dependencies]

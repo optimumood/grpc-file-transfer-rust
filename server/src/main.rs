@@ -1,6 +1,6 @@
+use anyhow::Result;
 use clap::Parser;
 use server::{cli::Cli, server_main};
-use anyhow::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {

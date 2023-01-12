@@ -11,3 +11,4 @@ tonic.workspace = true
 tokio.workspace = true
 tokio-stream.workspace = true
 clap.workspace = true
+anyhow.workspace = true

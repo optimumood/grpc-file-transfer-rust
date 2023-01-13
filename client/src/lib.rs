@@ -1,23 +1,28 @@
 pub mod cli;
 mod file_client;
 
-use crate::cli::Cli;
+use crate::cli::{Cli, Commands::*};
 use anyhow::Result;
-use proto::api::file_service_client::FileServiceClient;
-use proto::api::ListFilesRequest;
-use tokio_stream::StreamExt;
+use file_client::FileClient;
+use tonic::transport::channel::Channel;
 
 pub async fn client_main(args: &Cli) -> Result<()> {
-    let mut client = FileServiceClient::connect("http://[::1]:50051")
-        .await
-        .unwrap();
+    let mut client = FileClient::new(args.address, args.port).await?;
 
-    let response = client.list_files(ListFilesRequest {}).await.unwrap();
+    match &args.command {
+        List => list_files(&mut client).await?,
+        Download { .. } => unimplemented!(),
+        Upload { .. } => unimplemented!(),
+    }
 
-    let mut resp_stream = response.into_inner();
+    Ok(())
+}
 
-    while let Some(item) = resp_stream.next().await {
-        println!("\treceived: {:?}", item.unwrap());
+async fn list_files(client: &mut FileClient<Channel>) -> Result<()> {
+    let files = client.list_files().await?;
+
+    for file in files {
+        println!("{:?}", file);
     }
 
     Ok(())

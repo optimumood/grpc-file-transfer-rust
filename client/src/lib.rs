@@ -1,10 +1,13 @@
+pub mod cli;
 mod file_client;
 
+use crate::cli::Cli;
+use anyhow::Result;
 use proto::api::file_service_client::FileServiceClient;
 use proto::api::ListFilesRequest;
 use tokio_stream::StreamExt;
 
-pub async fn client_main() -> Result<(), Box<dyn std::error::Error>> {
+pub async fn client_main(args: &Cli) -> Result<()> {
     let mut client = FileServiceClient::connect("http://[::1]:50051")
         .await
         .unwrap();
@@ -16,8 +19,6 @@ pub async fn client_main() -> Result<(), Box<dyn std::error::Error>> {
     while let Some(item) = resp_stream.next().await {
         println!("\treceived: {:?}", item.unwrap());
     }
-
-    println!("Hello, world!");
 
     Ok(())
 }

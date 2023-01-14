@@ -15,7 +15,9 @@ pub async fn client_main(args: &Cli) -> Result<()> {
                 .download_file(file.clone(), directory.clone())
                 .await?
         }
-        Upload { .. } => unimplemented!(),
+        Upload { file, directory } => {
+            &mut client.upload_file(file.clone(), directory.clone()).await?
+        }
     };
 
     Ok(())

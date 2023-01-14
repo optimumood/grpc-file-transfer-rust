@@ -1,17 +1,25 @@
 use anyhow::Result;
 use proto::api::file_service_client::FileServiceClient;
-use proto::api::{DownloadFileRequest, ListFilesRequest};
+use proto::api::{upload_file_request, DownloadFileRequest, ListFilesRequest, UploadFileRequest};
 use std::net::IpAddr;
 use std::path::PathBuf;
-use tokio::fs::File;
+use tokio::fs;
+use tokio::io::AsyncReadExt;
 use tokio::io::AsyncWriteExt;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 use tonic::transport::channel::Channel;
-use tracing::{info, instrument};
+use tracing::{error, info, instrument, Instrument};
 
 #[derive(Clone)]
 pub struct FileClient<T> {
     client: FileServiceClient<T>,
+}
+
+impl<T> FileClient<T> {
+    const CHANNEL_SIZE: usize = 10;
+    const CHUNK_SIZE_BYTES: u64 = 1024 * 1024; // 1 MB
 }
 
 impl FileClient<Channel> {
@@ -60,13 +68,78 @@ impl FileClient<Channel> {
         let mut file_path = directory;
         file_path.push(file);
 
-        let mut file = File::create(&file_path).await?;
+        let mut file = fs::File::create(&file_path).await?;
 
         while let Some(item) = file_stream.next().await {
             file.write_all(&item?.chunk).await?
         }
 
         file.flush().await?;
+
+        Ok(())
+    }
+
+    #[instrument(skip(self))]
+    pub async fn upload_file(&mut self, file: String, directory: PathBuf) -> Result<()> {
+        let (tx, rx) = mpsc::channel(Self::CHANNEL_SIZE);
+
+        let receiver_stream = ReceiverStream::new(rx);
+
+        let mut file_path = PathBuf::new();
+        file_path.push(&directory);
+        file_path.push(&file);
+
+        let task_handle = tokio::spawn(
+            async move {
+                if let Err(err) = tx
+                    .send(UploadFileRequest {
+                        r#type: Some(upload_file_request::Type::Name(file)),
+                    })
+                    .await
+                {
+                    error!(%err);
+                    Err(err)?;
+                }
+
+                let file = fs::File::open(file_path).await?;
+                let mut handle = file.take(Self::CHUNK_SIZE_BYTES);
+
+                loop {
+                    let mut chunk = Vec::with_capacity(Self::CHUNK_SIZE_BYTES as usize);
+
+                    let n = handle.read_to_end(&mut chunk).await?;
+
+                    if 0 == n {
+                        break;
+                    } else {
+                        handle.set_limit(Self::CHUNK_SIZE_BYTES);
+                    }
+
+                    let request = UploadFileRequest {
+                        r#type: Some(upload_file_request::Type::Chunk(chunk)),
+                    };
+
+                    if let Err(err) = tx.send(request).await {
+                        error!(%err);
+                        Err(err)?;
+                    }
+
+                    if n < Self::CHUNK_SIZE_BYTES as usize {
+                        break;
+                    }
+                }
+
+                Ok::<(), anyhow::Error>(())
+            }
+            .in_current_span(),
+        );
+
+        self.client.upload_file(receiver_stream).await?;
+
+        if let Err(err) = task_handle.await? {
+            error!(%err);
+            Err(err)?;
+        }
 
         Ok(())
     }

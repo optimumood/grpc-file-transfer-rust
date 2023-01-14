@@ -24,6 +24,8 @@ pub enum Commands {
     Upload {
         #[arg(short, long)]
         file: String,
+        #[arg(short, long)]
+        directory: PathBuf,
     },
     List,
 }

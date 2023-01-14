@@ -1,15 +1,16 @@
 use anyhow::anyhow;
 use proto::api::file_service_server::FileService;
 use proto::api::{
-    DownloadFileRequest, DownloadFileResponse, ListFilesRequest, ListFilesResponse,
-    UploadFileRequest, UploadFileResponse,
+    upload_file_request, DownloadFileRequest, DownloadFileResponse, ListFilesRequest,
+    ListFilesResponse, UploadFileRequest, UploadFileResponse,
 };
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs;
-use tokio::io::AsyncReadExt;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
+use tokio_stream::StreamExt;
 use tonic::{Request, Response, Status, Streaming};
 use tracing::{error, instrument, Instrument};
 
@@ -48,49 +49,52 @@ impl FileService for FileServiceImpl {
         file_path.push(directory.as_ref());
         file_path.push(request.name);
 
-        tokio::spawn(async move {
-            let result = async move {
-                let file = fs::File::open(file_path).await?;
-                let mut handle = file.take(Self::CHUNK_SIZE_BYTES);
+        tokio::spawn(
+            async move {
+                let result = async move {
+                    let file = fs::File::open(file_path).await?;
+                    let mut handle = file.take(Self::CHUNK_SIZE_BYTES);
 
-                loop {
-                    let mut response = DownloadFileResponse {
-                        chunk: Vec::with_capacity(Self::CHUNK_SIZE_BYTES as usize),
-                    };
+                    loop {
+                        let mut response = DownloadFileResponse {
+                            chunk: Vec::with_capacity(Self::CHUNK_SIZE_BYTES as usize),
+                        };
 
-                    let n = handle.read_to_end(&mut response.chunk).await?;
+                        let n = handle.read_to_end(&mut response.chunk).await?;
 
-                    if 0 == n {
-                        break;
-                    } else {
-                        handle.set_limit(Self::CHUNK_SIZE_BYTES);
+                        if 0 == n {
+                            break;
+                        } else {
+                            handle.set_limit(Self::CHUNK_SIZE_BYTES);
+                        }
+
+                        if let Err(err) = tx.send(Ok(response)).await {
+                            error!(%err);
+                            break;
+                        }
+
+                        if n < Self::CHUNK_SIZE_BYTES as usize {
+                            break;
+                        }
                     }
 
-                    if let Err(err) = tx.send(Ok(response)).await {
-                        error!(%err);
-                        break;
-                    }
-
-                    if n < Self::CHUNK_SIZE_BYTES as usize {
-                        break;
-                    }
+                    Ok::<(), anyhow::Error>(())
                 }
+                .await;
 
-                Ok::<(), anyhow::Error>(())
-            }
-            .await;
-
-            if let Err(err) = result {
-                error!(%err);
-                let send_result = tx_error
-                    .send(Err(Status::internal("Failed to send file")))
-                    .await;
-
-                if let Err(err) = send_result {
+                if let Err(err) = result {
                     error!(%err);
+                    let send_result = tx_error
+                        .send(Err(Status::internal("Failed to send file")))
+                        .await;
+
+                    if let Err(err) = send_result {
+                        error!(%err);
+                    }
                 }
             }
-        });
+            .in_current_span(),
+        );
 
         Ok(Response::new(ReceiverStream::new(rx)))
     }
@@ -100,7 +104,45 @@ impl FileService for FileServiceImpl {
         &self,
         request: Request<Streaming<UploadFileRequest>>,
     ) -> Result<Response<UploadFileResponse>, Status> {
-        unimplemented!()
+        let mut request_stream = request.into_inner();
+        let directory = Arc::clone(&self.directory);
+
+        let task_handle = tokio::spawn(async move {
+            let file_name = if let Some(file_upload) = request_stream.next().await {
+                match file_upload?.r#type.unwrap() {
+                    upload_file_request::Type::Name(name) => name,
+                    wrong_type => Err(anyhow!("Wrong message type: {:?}", wrong_type))?,
+                }
+            } else {
+                Err(anyhow!("Wrong message type"))?
+            };
+
+            let mut file_path = PathBuf::new();
+            file_path.push(directory.as_ref());
+            file_path.push(&file_name);
+
+            let mut file_handle = fs::File::create(file_path).await?;
+
+            while let Some(file_upload) = request_stream.next().await {
+                match file_upload?.r#type {
+                    Some(upload_file_request::Type::Chunk(chunk)) => {
+                        file_handle.write_all(&chunk).await?;
+                    }
+                    wrong_type => Err(anyhow!("Wrong message type: {:?}", wrong_type))?,
+                }
+            }
+
+            file_handle.flush().await?;
+
+            Ok::<(), anyhow::Error>(())
+        });
+
+        if let Err(err) = task_handle.await.unwrap() {
+            error!(%err);
+            Err(Status::internal("Failed to upload file"))
+        } else {
+            Ok(Response::new(UploadFileResponse::default()))
+        }
     }
 
     #[instrument(skip(self))]

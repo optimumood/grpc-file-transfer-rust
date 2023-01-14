@@ -7,6 +7,7 @@ use proto::api::{
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs;
+use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response, Status, Streaming};
@@ -19,6 +20,7 @@ pub struct FileServiceImpl {
 
 impl FileServiceImpl {
     const CHANNEL_SIZE: usize = 10;
+    const CHUNK_SIZE_BYTES: u64 = 1024 * 1024; // 1 MB
 
     pub fn new(directory: PathBuf) -> Self {
         Self {
@@ -37,7 +39,60 @@ impl FileService for FileServiceImpl {
         &self,
         request: Request<DownloadFileRequest>,
     ) -> Result<Response<Self::DownloadFileStream>, Status> {
-        unimplemented!()
+        let request = request.into_inner();
+        let (tx, rx) = mpsc::channel(Self::CHANNEL_SIZE);
+        let tx_error = tx.clone();
+        let directory = Arc::clone(&self.directory);
+
+        let mut file_path = PathBuf::new();
+        file_path.push(directory.as_ref());
+        file_path.push(request.name);
+
+        tokio::spawn(async move {
+            let result = async move {
+                let file = fs::File::open(file_path).await?;
+                let mut handle = file.take(Self::CHUNK_SIZE_BYTES);
+
+                loop {
+                    let mut response = DownloadFileResponse {
+                        chunk: Vec::with_capacity(Self::CHUNK_SIZE_BYTES as usize),
+                    };
+
+                    let n = handle.read_to_end(&mut response.chunk).await?;
+
+                    if 0 == n {
+                        break;
+                    } else {
+                        handle.set_limit(Self::CHUNK_SIZE_BYTES);
+                    }
+
+                    if let Err(err) = tx.send(Ok(response)).await {
+                        error!(%err);
+                        break;
+                    }
+
+                    if n < Self::CHUNK_SIZE_BYTES as usize {
+                        break;
+                    }
+                }
+
+                Ok::<(), anyhow::Error>(())
+            }
+            .await;
+
+            if let Err(err) = result {
+                error!(%err);
+                let send_result = tx_error
+                    .send(Err(Status::internal("Failed to send file")))
+                    .await;
+
+                if let Err(err) = send_result {
+                    error!(%err);
+                }
+            }
+        });
+
+        Ok(Response::new(ReceiverStream::new(rx)))
     }
 
     #[instrument(skip(self))]
@@ -71,11 +126,17 @@ impl FileService for FileServiceImpl {
                             anyhow!("OsString convertion failed: {:?}", e.to_string_lossy())
                         })?;
                         let file_size = file_metadata.len();
-                        tx.send(Ok(ListFilesResponse {
-                            name: file_name,
-                            size: file_size,
-                        }))
-                        .await?;
+
+                        if let Err(err) = tx
+                            .send(Ok(ListFilesResponse {
+                                name: file_name,
+                                size: file_size,
+                            }))
+                            .await
+                        {
+                            error!(%err);
+                            break;
+                        }
                     }
 
                     Ok::<(), anyhow::Error>(())

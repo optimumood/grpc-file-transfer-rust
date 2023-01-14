@@ -1,3 +1,4 @@
+use crate::output_print::FilesOutputPrint;
 use anyhow::Result;
 use proto::api::file_service_client::FileServiceClient;
 use proto::api::{upload_file_request, DownloadFileRequest, ListFilesRequest, UploadFileRequest};
@@ -48,9 +49,7 @@ impl FileClient<Channel> {
             files.push(item?);
         }
 
-        for file in files {
-            info!(?file);
-        }
+        println!("{}", FilesOutputPrint::from(files));
 
         Ok(())
     }

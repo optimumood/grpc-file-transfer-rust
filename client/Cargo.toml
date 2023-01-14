@@ -15,3 +15,5 @@ anyhow.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 tracing-attributes.workspace = true
+comfy-table = "6.1.4"
+ubyte = "0.10.3"

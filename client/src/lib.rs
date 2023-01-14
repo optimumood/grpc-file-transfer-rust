@@ -1,5 +1,6 @@
 pub mod cli;
 mod file_client;
+mod output_print;
 
 use crate::cli::{Cli, Commands::*};
 use anyhow::Result;

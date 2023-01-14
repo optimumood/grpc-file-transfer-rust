@@ -1,11 +1,15 @@
 use anyhow::Result;
 use proto::api::file_service_client::FileServiceClient;
-use proto::api::{ListFilesRequest, ListFilesResponse};
+use proto::api::{DownloadFileRequest, ListFilesRequest};
 use std::net::IpAddr;
+use std::path::PathBuf;
+use tokio::fs::File;
+use tokio::io::AsyncWriteExt;
 use tokio_stream::StreamExt;
 use tonic::transport::channel::Channel;
 use tracing::{info, instrument};
 
+#[derive(Clone)]
 pub struct FileClient<T> {
     client: FileServiceClient<T>,
 }
@@ -20,11 +24,12 @@ impl FileClient<Channel> {
 
         info!("Connecting to {}", dst);
         let client = FileServiceClient::connect(dst).await?;
+        info!("Connected");
         Ok(Self { client })
     }
 
     #[instrument(skip(self))]
-    pub async fn list_files(&mut self) -> Result<Vec<ListFilesResponse>> {
+    pub async fn list_files(&mut self) -> Result<()> {
         let mut files = Vec::new();
 
         let response = self.client.list_files(ListFilesRequest {}).await?;
@@ -35,6 +40,34 @@ impl FileClient<Channel> {
             files.push(item?);
         }
 
-        Ok(files)
+        for file in files {
+            info!(?file);
+        }
+
+        Ok(())
+    }
+
+    #[instrument(skip(self))]
+    pub async fn download_file(&mut self, file: String, directory: PathBuf) -> Result<()> {
+        let response = self
+            .client
+            .download_file(DownloadFileRequest {
+                name: file.to_string(),
+            })
+            .await?;
+
+        let mut file_stream = response.into_inner();
+        let mut file_path = directory;
+        file_path.push(file);
+
+        let mut file = File::create(&file_path).await?;
+
+        while let Some(item) = file_stream.next().await {
+            file.write_all(&item?.chunk).await?
+        }
+
+        file.flush().await?;
+
+        Ok(())
     }
 }

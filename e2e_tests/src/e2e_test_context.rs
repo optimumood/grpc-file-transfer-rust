@@ -1,11 +1,13 @@
 use assert_cmd::cargo::cargo_bin;
+use rstest::*;
 use std::fs::File;
 use std::io::Write;
+use std::mem::ManuallyDrop;
+use std::net::IpAddr;
 use std::path::PathBuf;
 use std::process::{Child, Command};
 use std::sync::Once;
 use tempdir::TempDir;
-use test_context::TestContext;
 use tokio::runtime::Runtime;
 use tonic::transport::Channel;
 
@@ -18,12 +20,12 @@ pub struct E2ETestContext {
 }
 
 pub struct Client {
-    pub dir: TempDir,
+    pub dir: ManuallyDrop<TempDir>,
     pub files: Vec<TestFile>,
 }
 
 pub struct Server {
-    pub dir: TempDir,
+    pub dir: ManuallyDrop<TempDir>,
     pub process: Option<Child>,
     pub files: Vec<TestFile>,
 }
@@ -38,7 +40,12 @@ pub enum AppType {
     Server,
 }
 
-impl TestContext for E2ETestContext {
+#[fixture]
+pub fn ctx() -> E2ETestContext {
+    E2ETestContext::setup()
+}
+
+impl E2ETestContext {
     fn setup() -> E2ETestContext {
         BUILD.call_once(|| {
             Command::new("cargo")
@@ -58,12 +65,12 @@ impl TestContext for E2ETestContext {
         let port = portpicker::pick_unused_port().expect("No ports free");
 
         let server = Server {
-            dir: server_dir,
+            dir: ManuallyDrop::new(server_dir),
             files: vec![],
             process: None,
         };
         let client = Client {
-            dir: client_dir,
+            dir: ManuallyDrop::new(client_dir),
             files: vec![],
         };
 
@@ -74,46 +81,62 @@ impl TestContext for E2ETestContext {
         }
     }
 
-    fn teardown(self) {
-        if let Some(mut process) = self.server.process {
+    fn teardown(&mut self) {
+        if let Some(ref mut process) = self.server.process {
             if let Err(err) = process.kill() {
                 eprintln!("failed to kill server process: {err}");
             }
         }
-
-        if let Err(err) = self.server.dir.close() {
+        let server_dir;
+        unsafe {
+            server_dir = ManuallyDrop::take(&mut self.server.dir);
+        }
+        if let Err(err) = server_dir.close() {
             eprintln!("failed to delete temporary server directory: {err}");
         }
 
-        if let Err(err) = self.client.dir.close() {
+        let client_dir;
+        unsafe {
+            client_dir = ManuallyDrop::take(&mut self.client.dir);
+        }
+        if let Err(err) = client_dir.close() {
             eprintln!("failed to delete temporary client directory: {err}");
         }
+    }
+}
+
+impl Drop for E2ETestContext {
+    fn drop(&mut self) {
+        self.teardown();
     }
 }
 
 impl E2ETestContext {
     const SERVER_BIN_NAME: &str = "server";
 
-    pub fn start_server(&mut self) {
-        let server_ip_address = "::1";
+    pub fn start_server(&mut self, server_ip_address: IpAddr) {
         let server_bin_path = cargo_bin(Self::SERVER_BIN_NAME);
         let server_child = Command::new(server_bin_path)
             .args(["--port", &self.port.to_string()])
-            .args(["--address", server_ip_address])
+            .args(["--address", &server_ip_address.to_string()])
             .args(["--directory", self.server.dir.path().to_str().unwrap()])
             .spawn()
             .expect("server failed to start");
 
-        self.wait_for_server(server_ip_address);
+        self.wait_for_server(&server_ip_address);
 
         self.server.process = Some(server_child);
     }
 
-    fn wait_for_server(&self, server_ip_address: &str) {
+    fn wait_for_server(&self, server_ip_address: &IpAddr) {
         let rt = Runtime::new().unwrap();
-        let server_address = format!("http://[{}]:{}", server_ip_address, self.port);
+        let server_address = match server_ip_address {
+            IpAddr::V4(ipv4) => format!("http://{}:{}", ipv4, self.port),
+            IpAddr::V6(ipv6) => format!("http://[{}]:{}", ipv6, self.port),
+        };
         let mut retries: u32 = 0;
         const MAX_RETRIES: u32 = 10;
+
         loop {
             retries += 1;
 

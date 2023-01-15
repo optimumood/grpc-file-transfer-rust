@@ -1,24 +1,27 @@
+use crate::e2e_test_context::ctx;
 use assert_cmd::Command;
 use e2e_test_context::{AppType, E2ETestContext};
 use predicates::prelude::*;
+use rstest::*;
+use std::net::IpAddr;
 use std::path::PathBuf;
-use test_context::test_context;
 use utils::compare_files;
 
 mod e2e_test_context;
 mod utils;
 
-#[test_context(E2ETestContext)]
-#[test]
-fn test_list_files_success(ctx: &mut E2ETestContext) {
-    ctx.start_server();
+#[rstest]
+#[case::ipv4("0.0.0.0")]
+#[case::ipv6("::1")]
+fn test_list_files_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr) {
+    ctx.start_server(ip_address);
     ctx.create_test_file(AppType::Server, "abc", "hello");
     ctx.create_test_file(AppType::Server, "xyz", "grpc");
 
     let mut cmd = Command::cargo_bin("client").unwrap();
     let assert = cmd
         .args(["--port", &ctx.port.to_string()])
-        .args(["--address", "::1"])
+        .args(["--address", &ip_address.to_string()])
         .arg("list")
         .assert();
 
@@ -29,15 +32,16 @@ fn test_list_files_success(ctx: &mut E2ETestContext) {
         .stdout(predicate::str::contains("xyz        4B"));
 }
 
-#[test_context(E2ETestContext)]
-#[test]
-fn test_list_files_empty_success(ctx: &mut E2ETestContext) {
-    ctx.start_server();
+#[rstest]
+#[case::ipv4("0.0.0.0")]
+#[case::ipv6("::1")]
+fn test_list_files_empty_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr) {
+    ctx.start_server(ip_address);
 
     let mut cmd = Command::cargo_bin("client").unwrap();
     let assert = cmd
         .args(["--port", &ctx.port.to_string()])
-        .args(["--address", "::1"])
+        .args(["--address", &ip_address.to_string()])
         .arg("list")
         .assert();
 
@@ -46,10 +50,11 @@ fn test_list_files_empty_success(ctx: &mut E2ETestContext) {
         .stdout(predicate::str::ends_with("File name  Size").trim());
 }
 
-#[test_context(E2ETestContext)]
-#[test]
-fn test_download_file_success(ctx: &mut E2ETestContext) {
-    ctx.start_server();
+#[rstest]
+#[case::ipv4("0.0.0.0")]
+#[case::ipv6("::1")]
+fn test_download_file_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr) {
+    ctx.start_server(ip_address);
 
     let test_file_name = "abc";
     ctx.create_test_file(AppType::Server, test_file_name, "hello");
@@ -57,7 +62,7 @@ fn test_download_file_success(ctx: &mut E2ETestContext) {
     let mut cmd = Command::cargo_bin("client").unwrap();
     let result = cmd
         .args(["--port", &ctx.port.to_string()])
-        .args(["--address", "::1"])
+        .args(["--address", &ip_address.to_string()])
         .arg("download")
         .args(["--file", test_file_name])
         .args(["--directory", ctx.client.dir.path().to_str().unwrap()])
@@ -77,10 +82,11 @@ fn test_download_file_success(ctx: &mut E2ETestContext) {
     ));
 }
 
-#[test_context(E2ETestContext)]
-#[test]
-fn test_upload_file_success(ctx: &mut E2ETestContext) {
-    ctx.start_server();
+#[rstest]
+#[case::ipv4("0.0.0.0")]
+#[case::ipv6("::1")]
+fn test_upload_file_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr) {
+    ctx.start_server(ip_address);
 
     let test_file_name = "abc";
     ctx.create_test_file(AppType::Client, test_file_name, "hello");
@@ -88,7 +94,7 @@ fn test_upload_file_success(ctx: &mut E2ETestContext) {
     let mut cmd = Command::cargo_bin("client").unwrap();
     let result = cmd
         .args(["--port", &ctx.port.to_string()])
-        .args(["--address", "::1"])
+        .args(["--address", &ip_address.to_string()])
         .arg("upload")
         .args(["--file", test_file_name])
         .args(["--directory", ctx.client.dir.path().to_str().unwrap()])

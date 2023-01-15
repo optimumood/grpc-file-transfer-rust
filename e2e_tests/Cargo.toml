@@ -10,11 +10,11 @@ edition = "2021"
 [dev-dependencies]
 client = { path = "../client" }
 server = { path = "../server" }
-test-context = "0.1.4"
 assert_cmd = "2.0.8"
 portpicker = "0.1.1"
 tempdir = "0.3.7"
 predicates = "2.1.5"
+rstest = "0.16.0"
 tonic = {workspace = true, features =["transport"]}
 tokio.workspace = true
 

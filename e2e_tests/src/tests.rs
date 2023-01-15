@@ -97,7 +97,7 @@ fn test_upload_file_success(ctx: &mut E2ETestContext) {
     assert!(result.is_ok());
 
     let mut expected_server_file_path = PathBuf::new();
-    expected_server_file_path.push(ctx.client.dir.path());
+    expected_server_file_path.push(ctx.server.dir.path());
     expected_server_file_path.push(test_file_name);
 
     assert!(expected_server_file_path.exists());

@@ -1,5 +1,5 @@
 use assert_cmd::Command;
-use e2e_test_context::E2ETestContext;
+use e2e_test_context::{AppType, E2ETestContext};
 use predicates::prelude::*;
 use std::path::PathBuf;
 use test_context::test_context;
@@ -12,8 +12,8 @@ mod utils;
 #[test]
 fn test_list_files_success(ctx: &mut E2ETestContext) {
     ctx.start_server();
-    ctx.create_test_files("abc", "hello");
-    ctx.create_test_files("xyz", "grpc");
+    ctx.create_test_file(AppType::Server, "abc", "hello");
+    ctx.create_test_file(AppType::Server, "xyz", "grpc");
 
     let mut cmd = Command::cargo_bin("client").unwrap();
     let assert = cmd
@@ -52,7 +52,7 @@ fn test_download_file_success(ctx: &mut E2ETestContext) {
     ctx.start_server();
 
     let test_file_name = "abc";
-    ctx.create_test_files(test_file_name, "hello");
+    ctx.create_test_file(AppType::Server, test_file_name, "hello");
 
     let mut cmd = Command::cargo_bin("client").unwrap();
     let result = cmd
@@ -60,19 +60,50 @@ fn test_download_file_success(ctx: &mut E2ETestContext) {
         .args(["--address", "::1"])
         .arg("download")
         .args(["--file", test_file_name])
-        .args(["--directory", ctx.client_dir.path().to_str().unwrap()])
+        .args(["--directory", ctx.client.dir.path().to_str().unwrap()])
         .ok();
 
     assert!(result.is_ok());
 
     let mut expected_client_file_path = PathBuf::new();
-    expected_client_file_path.push(ctx.client_dir.path());
+    expected_client_file_path.push(ctx.client.dir.path());
     expected_client_file_path.push(test_file_name);
 
     assert!(expected_client_file_path.exists());
 
     assert!(compare_files(
         &expected_client_file_path,
-        &ctx.files[0].abs_path
+        &ctx.server.files[0].abs_path
+    ));
+}
+
+#[test_context(E2ETestContext)]
+#[test]
+fn test_upload_file_success(ctx: &mut E2ETestContext) {
+    ctx.start_server();
+
+    let test_file_name = "abc";
+    ctx.create_test_file(AppType::Client, test_file_name, "hello");
+
+    let mut cmd = Command::cargo_bin("client").unwrap();
+    let result = cmd
+        .args(["--port", &ctx.port.to_string()])
+        .args(["--address", "::1"])
+        .arg("upload")
+        .args(["--file", test_file_name])
+        .args(["--directory", ctx.client.dir.path().to_str().unwrap()])
+        .ok();
+
+    assert!(result.is_ok());
+
+    let mut expected_server_file_path = PathBuf::new();
+    expected_server_file_path.push(ctx.client.dir.path());
+    expected_server_file_path.push(test_file_name);
+
+    assert!(expected_server_file_path.exists());
+
+    assert!(compare_files(
+        &expected_server_file_path,
+        &ctx.client.files[0].abs_path,
     ));
 }

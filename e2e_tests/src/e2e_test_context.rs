@@ -10,16 +10,30 @@ use test_context::TestContext;
 static BUILD: Once = Once::new();
 
 pub struct E2ETestContext {
-    pub server_dir: TempDir,
-    pub client_dir: TempDir,
+    pub client: Client,
+    pub server: Server,
     pub port: u16,
-    pub server_child: Option<Child>,
+}
+
+pub struct Client {
+    pub dir: TempDir,
+    pub files: Vec<TestFile>,
+}
+
+pub struct Server {
+    pub dir: TempDir,
+    pub process: Option<Child>,
     pub files: Vec<TestFile>,
 }
 
 pub struct TestFile {
     pub handle: File,
     pub abs_path: PathBuf,
+}
+
+pub enum AppType {
+    Client,
+    Server,
 }
 
 impl TestContext for E2ETestContext {
@@ -41,27 +55,35 @@ impl TestContext for E2ETestContext {
 
         let port = portpicker::pick_unused_port().expect("No ports free");
 
-        E2ETestContext {
-            server_dir,
-            client_dir,
-            port,
-            server_child: None,
+        let server = Server {
+            dir: server_dir,
             files: vec![],
+            process: None,
+        };
+        let client = Client {
+            dir: client_dir,
+            files: vec![],
+        };
+
+        E2ETestContext {
+            client,
+            server,
+            port,
         }
     }
 
     fn teardown(self) {
-        if let Some(mut server_child) = self.server_child {
-            if let Err(err) = server_child.kill() {
+        if let Some(mut process) = self.server.process {
+            if let Err(err) = process.kill() {
                 eprintln!("failed to kill server process: {err}");
             }
         }
 
-        if let Err(err) = self.server_dir.close() {
+        if let Err(err) = self.server.dir.close() {
             eprintln!("failed to delete temporary server directory: {err}");
         }
 
-        if let Err(err) = self.client_dir.close() {
+        if let Err(err) = self.client.dir.close() {
             eprintln!("failed to delete temporary client directory: {err}");
         }
     }
@@ -75,28 +97,35 @@ impl E2ETestContext {
         let server_child = Command::new(server_bin_path)
             .args(["--port", &self.port.to_string()])
             .args(["--address", "::1"])
-            .args(["--directory", self.server_dir.path().to_str().unwrap()])
+            .args(["--directory", self.server.dir.path().to_str().unwrap()])
             .spawn()
             .expect("server failed to start");
 
-        self.server_child = Some(server_child);
+        self.server.process = Some(server_child);
     }
 
-    pub fn create_test_files(&mut self, name: &str, content: &str) {
+    pub fn create_test_file(&mut self, app_type: AppType, file_name: &str, file_content: &str) {
         let mut file_path = PathBuf::new();
-        file_path.push(self.server_dir.path());
-        file_path.push(name);
+        match app_type {
+            AppType::Client => file_path.push(self.client.dir.path()),
+            AppType::Server => file_path.push(self.server.dir.path()),
+        }
+        file_path.push(file_name);
 
-        let mut test_file = File::create(&file_path).expect("failed to create test file");
+        let mut file_handle = File::create(&file_path).expect("failed to create test file");
 
-        test_file
-            .write_all(content.as_bytes())
+        file_handle
+            .write_all(file_content.as_bytes())
             .expect("write_all failed");
-        test_file.sync_all().expect("sync_all failed");
+        file_handle.sync_all().expect("sync_all failed");
 
-        self.files.push(TestFile {
-            handle: test_file,
+        let test_file = TestFile {
+            handle: file_handle,
             abs_path: file_path,
-        });
+        };
+        match app_type {
+            AppType::Client => self.client.files.push(test_file),
+            AppType::Server => self.server.files.push(test_file),
+        }
     }
 }

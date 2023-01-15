@@ -14,7 +14,12 @@ pub struct E2ETestContext {
     pub client_dir: TempDir,
     pub port: u16,
     pub server_child: Option<Child>,
-    pub files: Vec<File>,
+    pub files: Vec<TestFile>,
+}
+
+pub struct TestFile {
+    pub handle: File,
+    pub abs_path: PathBuf,
 }
 
 impl TestContext for E2ETestContext {
@@ -82,13 +87,16 @@ impl E2ETestContext {
         file_path.push(self.server_dir.path());
         file_path.push(name);
 
-        let mut test_file = File::create(file_path).expect("failed to create test file");
+        let mut test_file = File::create(&file_path).expect("failed to create test file");
 
         test_file
             .write_all(content.as_bytes())
             .expect("write_all failed");
         test_file.sync_all().expect("sync_all failed");
 
-        self.files.push(test_file);
+        self.files.push(TestFile {
+            handle: test_file,
+            abs_path: file_path,
+        });
     }
 }

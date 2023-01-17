@@ -19,11 +19,11 @@ args = ["clippy", "--tests", "--benches", "--all-features", "--", "-A", "clippy:
 
 [tasks.build]
 command = "cargo"
-args = ["build"]
+args = ["build", "--bins"]
 
 [tasks.build-release]
 command = "cargo"
-args = ["build", "--release"]
+args = ["build", "--bins", "--release"]
 
 [tasks.e2e-tests]
 command = "cargo"

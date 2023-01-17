@@ -20,22 +20,20 @@ args = ["clippy", "--tests", "--benches", "--all-features", "--", "-A", "clippy:
 [tasks.build]
 command = "cargo"
 args = ["build"]
-dependencies = ["clean"]
 
 [tasks.build-release]
 command = "cargo"
 args = ["build", "--release"]
-dependencies = ["clean"]
 
 [tasks.e2e-tests]
 command = "cargo"
 args = ["test", "--package", "tests"]
-dependencies = ["clean", "build"]
+dependencies = ["build"]
 
 [tasks.e2e-bench]
 command = "cargo"
 args = ["bench", "--package", "tests"]
-dependencies = ["clean", "build-release"]
+dependencies = ["build-release"]
 
 [tasks.clean]
 command = "cargo"

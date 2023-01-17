@@ -30,23 +30,17 @@ jobs:
         toolchain: stable
     - name: Install Protoc
       uses: arduino/setup-protoc@v1
-    - name: Run cargo fmt
-      uses: actions-rs/cargo@v1
-      with:
-        command: fmt
-        args: --all --check --verbose
-    - name: Run cargo clippy
-      uses: actions-rs/cargo@v1
-      with:
-        command: clippy
-        args: --all-targets --all-features -- -D warnings
-    - name: Run cargo build
-      uses: actions-rs/cargo@v1
-      with:
-        command: build
-        args: --verbose
-    - name: Run cargo tests
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: --verbose
+    - name: Install cargo make
+      uses: davidB/rust-cargo-make@v1
+    - name: format
+      run: cargo make format
+    - name: clippy
+      run: cargo make clippy
+    - name: clippy-tests
+      run: cargo make clippy-tests
+    - name: build-release
+      run: cargo make build-release
+    - name: e2e-tests
+      run: cargo make e2e-tests
+    - name: e2e-bench
+      run: cargo make e2e-tests

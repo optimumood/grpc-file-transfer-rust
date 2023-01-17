@@ -1,0 +1,42 @@
+[env]
+CARGO_MAKE_USE_WORKSPACE_PROFILE = false
+CARGO_MAKE_EXTEND_WORKSPACE_MAKEFILE = true
+
+[config]
+default_to_workspace = false
+
+[tasks.format]
+command = "cargo"
+args = ["fmt", "--all", "--check", "--verbose"]
+
+[tasks.clippy]
+command = "cargo"
+args = ["clippy", "--all-features", "--", "-D", "warnings"]
+
+[tasks.clippy-tests]
+command = "cargo"
+args = ["clippy", "--tests", "--benches", "--all-features", "--", "-A", "clippy::all"]
+
+[tasks.build]
+command = "cargo"
+args = ["build"]
+dependencies = ["clean"]
+
+[tasks.build-release]
+command = "cargo"
+args = ["build", "--release"]
+dependencies = ["clean"]
+
+[tasks.e2e-tests]
+command = "cargo"
+args = ["test", "--package", "tests"]
+dependencies = ["clean", "build"]
+
+[tasks.e2e-bench]
+command = "cargo"
+args = ["bench", "--package", "tests"]
+dependencies = ["clean", "build-release"]
+
+[tasks.clean]
+command = "cargo"
+args = ["clean"]

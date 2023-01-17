@@ -6,12 +6,9 @@ use std::mem::ManuallyDrop;
 use std::net::IpAddr;
 use std::path::PathBuf;
 use std::process::{Child, Command};
-use std::sync::Once;
 use tempdir::TempDir;
 use tokio::runtime::Runtime;
 use tonic::transport::Channel;
-
-static BUILD: Once = Once::new();
 
 pub struct E2ETestContext {
     pub client: Client,
@@ -46,17 +43,7 @@ pub fn ctx() -> E2ETestContext {
 }
 
 impl E2ETestContext {
-    fn setup() -> E2ETestContext {
-        BUILD.call_once(|| {
-            Command::new("cargo")
-                .arg("build")
-                .arg("--workspace")
-                .spawn()
-                .expect("failed to build")
-                .wait()
-                .expect("failed waiting for build process");
-        });
-
+    pub fn setup() -> E2ETestContext {
         let server_dir =
             TempDir::new("my_directory_prefix").expect("Failed to create temporary directory");
         let client_dir =

@@ -38,3 +38,11 @@ dependencies = ["build-release"]
 [tasks.clean]
 command = "cargo"
 args = ["clean"]
+
+[tasks.install-client]
+command = "cargo"
+args = ["install", "--path", "client"]
+
+[tasks.install-server]
+command = "cargo"
+args = ["install", "--path", "server"]

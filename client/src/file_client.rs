@@ -11,7 +11,7 @@ use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 use tonic::transport::channel::Channel;
-use tracing::{error, debug, instrument, Instrument};
+use tracing::{debug, error, instrument, Instrument};
 
 #[derive(Clone)]
 pub struct FileClient<T> {

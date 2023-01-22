@@ -11,7 +11,7 @@ use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt;
 use tonic::transport::channel::Channel;
-use tracing::{error, info, instrument, Instrument};
+use tracing::{error, debug, instrument, Instrument};
 
 #[derive(Clone)]
 pub struct FileClient<T> {
@@ -31,9 +31,9 @@ impl FileClient<Channel> {
             IpAddr::V6(ipv6) => format!("http://[{}]:{}", ipv6, port),
         };
 
-        info!("Connecting to {}", dst);
+        debug!("Connecting to {}", dst);
         let client = FileServiceClient::connect(dst).await?;
-        info!("Connected");
+        debug!("Connected");
         Ok(Self { client })
     }
 

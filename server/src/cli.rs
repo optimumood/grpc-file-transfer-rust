@@ -1,6 +1,7 @@
 use clap::Parser;
 use std::net::IpAddr;
 use std::path::PathBuf;
+use tracing::Level;
 
 #[derive(Parser)]
 #[command(version)]
@@ -11,4 +12,6 @@ pub struct Cli {
     pub address: IpAddr,
     #[arg(short, long)]
     pub port: u16,
+    #[arg(short, long, default_value = "info")]
+    pub verbose: Level,
 }

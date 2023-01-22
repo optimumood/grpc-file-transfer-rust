@@ -1,6 +1,7 @@
 use clap::{Parser, Subcommand};
 use std::net::IpAddr;
 use std::path::PathBuf;
+use tracing::Level;
 
 #[derive(Parser)]
 #[command(version)]
@@ -11,6 +12,8 @@ pub struct Cli {
     pub port: u16,
     #[command(subcommand)]
     pub command: Commands,
+    #[arg(short, long, default_value = "info")]
+    pub verbose: Level,
 }
 
 #[derive(Subcommand)]

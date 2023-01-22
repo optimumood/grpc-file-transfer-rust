@@ -32,12 +32,12 @@ Read:
 - how to build and install binaries
 - how to run end-to-end tests and benchmarks
 - about project's automated workflow
-- usage
+- about usage
 
 ### :shopping_cart: Prerequisites <a name = "prerequisites"></a>
 If you want to build and run applications or tests, you need to install:
 - [Rust toolchain](https://www.rust-lang.org)
-- [Cargo-make](https://crates.io/crates/cargo-make) (Rust task runner and build tool)
+- [Cargo-make](https://sagiegurari.github.io/cargo-make/) (Rust task runner and build tool)
 
 ### :hammer: Building binaries <a name = "building-binaries"></a>
 #### debug mode
@@ -93,6 +93,7 @@ Options:
   -d, --directory <DIRECTORY>
   -H, --address <ADDRESS>      [default: 127.0.0.1]
   -p, --port <PORT>
+  -v, --verbose <VERBOSE>      [default: info]
   -h, --help                   Print help
   -V, --version                Print version
 ```
@@ -111,6 +112,7 @@ Commands:
 Options:
   -H, --address <ADDRESS>  [default: 127.0.0.1]
   -p, --port <PORT>
+  -v, --verbose <VERBOSE>  [default: info]
   -h, --help               Print help
   -V, --version            Print version
 ```

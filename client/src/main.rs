@@ -4,14 +4,15 @@ use client::{cli::Cli, client_main};
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let args = Cli::parse();
+
     tracing_subscriber::fmt()
         .with_file(true)
         .with_line_number(true)
         .with_thread_ids(true)
         .with_target(false)
+        .with_max_level(args.verbose)
         .init();
-
-    let args = Cli::try_parse()?;
 
     client_main(&args).await?;
 

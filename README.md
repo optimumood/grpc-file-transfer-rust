@@ -87,7 +87,7 @@ Below are presented example commands.
 - Server help command
 ```shell
 $ server --help
-Usage: server [OPTIONS] --directory <DIRECTORY> --port <PORT>
+Usage: server [OPTIONS] --directory <DIRECTORY>
 
 Options:
   -d, --directory <DIRECTORY>
@@ -125,9 +125,6 @@ $ server --directory /tmp/server -p 50051 --address ::1
 - List files command
 ```shell
 $ client --port 50051 --address ::1 list
-
-2023-01-20T13:31:06.205926Z  INFO ThreadId(01) new{address=::1 port=50051}: client/src/file_client.rs:34: Connecting to http://[::1]:50051
-2023-01-20T13:31:06.207201Z  INFO ThreadId(01) new{address=::1 port=50051}: client/src/file_client.rs:36: Connected
  File name  Size
  abc        12B
  abc2       0B

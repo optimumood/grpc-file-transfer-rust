@@ -11,7 +11,7 @@ pub struct Cli {
     #[arg(short = 'H', long, default_value = "127.0.0.1")]
     pub address: IpAddr,
     #[arg(short, long)]
-    pub port: u16,
+    pub port: Option<u16>,
     #[arg(short, long, default_value = "info")]
     pub verbose: Level,
 }

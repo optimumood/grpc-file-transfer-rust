@@ -10,37 +10,90 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
-
+  fmt:
+    name: fmt
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
-    - uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - uses: Swatinem/rust-cache@v2
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
     - name: Install Protoc
       uses: arduino/setup-protoc@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Install cargo make
       uses: davidB/rust-cargo-make@v1
     - name: format
       run: cargo make format
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: Swatinem/rust-cache@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install cargo make
+      uses: davidB/rust-cargo-make@v1
     - name: clippy
       run: cargo make clippy
     - name: clippy-tests
       run: cargo make clippy-tests
+  build-release:
+    name: build-release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: Swatinem/rust-cache@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install cargo make
+      uses: davidB/rust-cargo-make@v1
     - name: build-release
       run: cargo make build-release
+  e2e-tests:
+    name: e2e-tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: Swatinem/rust-cache@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install cargo make
+      uses: davidB/rust-cargo-make@v1
     - name: e2e-tests
       run: cargo make e2e-tests
+  e2e-bench:
+    name: e2e-bench
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: Swatinem/rust-cache@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Install Protoc
+      uses: arduino/setup-protoc@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install cargo make
+      uses: davidB/rust-cargo-make@v1
     - name: e2e-bench
       run: cargo make e2e-bench

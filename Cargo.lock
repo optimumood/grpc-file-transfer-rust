@@ -169,6 +169,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dfb24e866b15a1af2a1b663f10c6b6b8f397a84aadb828f12e5b289ec23a3a3c"
 
 [[package]]
+name = "bytesize"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c58ec36aac5066d5ca17df51b3e70279f5670a72102f5752cb7e7c856adfc70"
+
+[[package]]
 name = "cast"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1592,10 +1598,12 @@ name = "tests"
 version = "0.1.0"
 dependencies = [
  "assert_cmd",
+ "bytesize",
  "client",
  "criterion",
  "portpicker",
  "predicates",
+ "rand 0.8.5",
  "rstest",
  "server",
  "tempdir",

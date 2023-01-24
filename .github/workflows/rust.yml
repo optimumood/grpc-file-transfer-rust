@@ -15,19 +15,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - uses: Swatinem/rust-cache@v2
     - uses: actions/cache@v3
+      id: cache-protoc
       with:
         path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          /opt/hostedtoolcache/protoc/
+        key: ${{ runner.os }}-protoc
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
     - name: Install Protoc
+      if: steps.cache-protoc.outputs.cache-hit != 'true'
       uses: arduino/setup-protoc@v1
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -40,19 +39,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - uses: Swatinem/rust-cache@v2
     - uses: actions/cache@v3
+      id: cache-protoc
       with:
         path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          /opt/hostedtoolcache/protoc/
+        key: ${{ runner.os }}-protoc
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
     - name: Install Protoc
+      if: steps.cache-protoc.outputs.cache-hit != 'true'
       uses: arduino/setup-protoc@v1
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -67,19 +65,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - uses: Swatinem/rust-cache@v2
     - uses: actions/cache@v3
+      id: cache-protoc
       with:
         path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          /opt/hostedtoolcache/protoc/
+        key: ${{ runner.os }}-protoc
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
     - name: Install Protoc
+      if: steps.cache-protoc.outputs.cache-hit != 'true'
       uses: arduino/setup-protoc@v1
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -92,19 +89,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - uses: Swatinem/rust-cache@v2
     - uses: actions/cache@v3
+      id: cache-protoc
       with:
         path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          /opt/hostedtoolcache/protoc/
+        key: ${{ runner.os }}-protoc
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
     - name: Install Protoc
+      if: steps.cache-protoc.outputs.cache-hit != 'true'
       uses: arduino/setup-protoc@v1
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -117,19 +113,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - uses: Swatinem/rust-cache@v2
     - uses: actions/cache@v3
+      id: cache-protoc
       with:
         path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          /opt/hostedtoolcache/protoc/
+        key: ${{ runner.os }}-protoc
     - uses: actions-rs/toolchain@v1
       with:
         toolchain: stable
     - name: Install Protoc
+      if: steps.cache-protoc.outputs.cache-hit != 'true'
       uses: arduino/setup-protoc@v1
       with:
         repo-token: ${{ secrets.GITHUB_TOKEN }}

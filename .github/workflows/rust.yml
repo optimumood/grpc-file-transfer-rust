@@ -29,6 +29,8 @@ jobs:
         toolchain: stable
     - name: Install Protoc
       uses: arduino/setup-protoc@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Install cargo make
       uses: davidB/rust-cargo-make@v1
     - name: format
@@ -52,6 +54,8 @@ jobs:
         toolchain: stable
     - name: Install Protoc
       uses: arduino/setup-protoc@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Install cargo make
       uses: davidB/rust-cargo-make@v1
     - name: clippy
@@ -77,6 +81,8 @@ jobs:
         toolchain: stable
     - name: Install Protoc
       uses: arduino/setup-protoc@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Install cargo make
       uses: davidB/rust-cargo-make@v1
     - name: build-release
@@ -100,6 +106,8 @@ jobs:
         toolchain: stable
     - name: Install Protoc
       uses: arduino/setup-protoc@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Install cargo make
       uses: davidB/rust-cargo-make@v1
     - name: e2e-tests
@@ -123,6 +131,8 @@ jobs:
         toolchain: stable
     - name: Install Protoc
       uses: arduino/setup-protoc@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
     - name: Install cargo make
       uses: davidB/rust-cargo-make@v1
     - name: e2e-bench

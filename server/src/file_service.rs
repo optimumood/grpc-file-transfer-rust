@@ -132,7 +132,7 @@ impl FileService for FileServiceImpl {
                 }
             }
 
-            file_handle.flush().await?;
+            file_handle.sync_all().await?;
 
             Ok::<(), anyhow::Error>(())
         });

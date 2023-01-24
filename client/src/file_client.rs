@@ -73,7 +73,7 @@ impl FileClient<Channel> {
             file.write_all(&item?.chunk).await?
         }
 
-        file.flush().await?;
+        file.sync_all().await?;
 
         Ok(())
     }

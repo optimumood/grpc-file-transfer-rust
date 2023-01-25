@@ -159,7 +159,7 @@ sequenceDiagram
     Server ->> Client: gRPC DownloadFileResponse
     Client ->> Client: save file's data chunk on disk
   end
-  Client -->> User:&nbsp;
+  Client -->> User:#nbsp;
 ```
 
 - upload file
@@ -174,7 +174,7 @@ sequenceDiagram
     Server ->> Server: save file's chunk data on disk
   end
   Server ->> Client: gRPC UploadFileResponse
-  Client -->> User:&nbsp;
+  Client -->> User:#nbsp;
 ```
 
 ## :building_construction: Technology stack <a name = "technology-stack"></a>

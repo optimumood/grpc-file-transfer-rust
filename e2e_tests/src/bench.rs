@@ -22,6 +22,12 @@ fn download_file(cmd: &mut Command, files: (&PathBuf, &PathBuf)) {
     compare_files_on_disk(files.0, files.1);
 }
 
+fn upload_file(cmd: &mut Command, files: (&PathBuf, &PathBuf)) {
+    cmd.assert().success();
+
+    compare_files_on_disk(files.0, files.1);
+}
+
 fn compare_files_on_disk(left: &Path, right: &Path) {
     let status = std::process::Command::new("diff")
         .arg(left.as_os_str())
@@ -61,8 +67,6 @@ fn criterion_benchmark_download_file_param(c: &mut Criterion) {
     let mut group = c.benchmark_group("throughput-download_file");
 
     for size in [ByteSize::mib(1), ByteSize::gib(1)] {
-        println!("size = {}", size.to_string_as(true));
-
         let rand_content: String = thread_rng()
             .sample_iter(&Alphanumeric)
             .take(size.as_u64() as usize)
@@ -102,9 +106,56 @@ fn criterion_benchmark_download_file_param(c: &mut Criterion) {
     group.finish();
 }
 
+fn criterion_benchmark_upload_file_param(c: &mut Criterion) {
+    let mut ctx = E2ETestContext::setup();
+    ctx.start_server("::1".parse().unwrap());
+
+    let mut group = c.benchmark_group("throughput-upload_file");
+
+    for size in [ByteSize::mib(1), ByteSize::gib(1)] {
+        let rand_content: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(size.as_u64() as usize)
+            .map(char::from)
+            .collect();
+
+        let file_name = format!("file_{size}");
+        ctx.create_test_file(AppType::Client, &file_name, &rand_content);
+
+        let mut file_server_path = PathBuf::new();
+        file_server_path.push(ctx.server.dir.path());
+        file_server_path.push(&file_name);
+
+        let file_client_path = ctx.client.files.last().unwrap().abs_path.clone();
+
+        let mut upload_cmd = Command::cargo_bin("client").unwrap();
+        upload_cmd
+            .args(["--port", &ctx.port.to_string()])
+            .args(["--address", "::1"])
+            .arg("upload")
+            .args(["--file", &file_name])
+            .args(["--directory", ctx.client.dir.path().to_str().unwrap()]);
+
+        group.throughput(Throughput::Bytes(size.as_u64()));
+        group.sample_size(10);
+
+        group.bench_function(format!("upload_file_{}", size.to_string_as(true)), |b| {
+            b.iter(|| {
+                upload_file(
+                    black_box(&mut upload_cmd),
+                    (&file_server_path, &file_client_path),
+                )
+            })
+        });
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     criterion_benchmark_list_files,
-    criterion_benchmark_download_file_param
+    criterion_benchmark_download_file_param,
+    criterion_benchmark_upload_file_param
 );
 criterion_main!(benches);

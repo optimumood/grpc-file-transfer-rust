@@ -17,6 +17,7 @@
     - [:turtle: Running end-to-end benchmarks](#running-e2e-benchmarks)
     - [:triangular_flag_on_post: Automated workflow](#automated-workflow)
     - [:desktop_computer: Usage](#usage)
+- [:arrows_counterclockwise: Diagrams](#diagrams)
 - [:building_construction: Technology stack](#technology-stack)
 
 ## :thinking: About <a name = "about"></a>
@@ -128,6 +129,52 @@ $ client --port 50051 --address ::1 list
  File name  Size
  abc        12B
  abc2       0B
+```
+
+## :arrows_counterclockwise: Diagrams <a name = "diagrams"></a>
+### High level sequence diagrams
+- list files
+```mermaid
+sequenceDiagram
+  actor User
+  participant Client
+  participant Server
+  User ->> Client: list files
+  Client ->> Server: gRPC ListFilesRequest
+  loop over all files on server side
+    Server ->> Client: gRPC ListFilesResponse
+  end
+  Client ->> User: print files list to stdout
+```
+
+- download file
+```mermaid
+sequenceDiagram
+  actor User
+  participant Client
+  participant Server
+  User ->> Client: download file
+  Client ->> Server: gRPC DownloadFileRequest
+  loop read next file's data chunk
+    Server ->> Client: gRPC DownloadFileResponse
+    Client ->> Client: save file's data chunk on disk
+  end
+  Client -->> User:&nbsp;
+```
+
+- upload file
+```mermaid
+sequenceDiagram
+  actor User
+  participant Client
+  participant Server
+  User ->> Client: upload file
+  loop read next file's data chunk
+    Client ->> Server: gRPC UploadFileRequest
+    Server ->> Server: save file's chunk data on disk
+  end
+  Server ->> Client: gRPC UploadFileResponse
+  Client -->> User:&nbsp;
 ```
 
 ## :building_construction: Technology stack <a name = "technology-stack"></a>

@@ -37,7 +37,7 @@ pub async fn server_main(args: &Cli) -> Result<()> {
         server = server.tls_config(tls_config)?;
     };
 
-    println!("Server address {}", local_addr);
+    println!("Server address {local_addr}");
 
     server
         .add_service(file_service_server)

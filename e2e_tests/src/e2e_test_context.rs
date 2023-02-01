@@ -135,7 +135,7 @@ impl E2ETestContext {
 
                 Ok::<(), tonic::transport::Error>(())
             }) {
-                eprintln!("Couldn't connect to server: {}", err);
+                eprintln!("Couldn't connect to server: {err}");
                 std::thread::sleep(std::time::Duration::from_secs(1));
             } else {
                 break;

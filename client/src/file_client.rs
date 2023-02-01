@@ -29,12 +29,12 @@ fn create_uri(host: &str, port: u16, tls: bool) -> String {
 
     if let Ok(ip_addr) = host.parse::<IpAddr>() {
         return match ip_addr {
-            IpAddr::V4(ipv4) => format!("{}://{}:{}", scheme, ipv4, port),
-            IpAddr::V6(ipv6) => format!("{}://[{}]:{}", scheme, ipv6, port),
+            IpAddr::V4(ipv4) => format!("{scheme}://{ipv4}:{port}"),
+            IpAddr::V6(ipv6) => format!("{scheme}://[{ipv6}]:{port}"),
         };
     }
 
-    format!("{}://{}:{}", scheme, host, port)
+    format!("{scheme}://{host}:{port}")
 }
 
 fn create_tls_config(ca_cert_pem: &str, domain_name: &str) -> Result<ClientTlsConfig> {

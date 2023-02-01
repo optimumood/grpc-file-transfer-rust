@@ -1,6 +1,5 @@
-use clap::Parser;
-use std::net::IpAddr;
-use std::path::PathBuf;
+use clap::{builder::ArgPredicate, Parser};
+use std::{net::IpAddr, path::PathBuf};
 use tracing::Level;
 
 #[derive(Parser)]
@@ -14,4 +13,22 @@ pub struct Cli {
     pub port: Option<u16>,
     #[arg(short, long, default_value = "info")]
     pub verbose: Level,
+    #[arg(
+        short,
+        long,
+        requires = "key",
+        required = true,
+        default_value_if("insecure", ArgPredicate::IsPresent, None)
+    )]
+    pub cert: Option<PathBuf>,
+    #[arg(
+        short,
+        long,
+        requires = "cert",
+        required = true,
+        default_value_if("insecure", ArgPredicate::IsPresent, None)
+    )]
+    pub key: Option<PathBuf>,
+    #[arg(short, long, conflicts_with_all = ["key", "cert"])]
+    pub insecure: bool,
 }

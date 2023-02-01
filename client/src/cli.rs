@@ -1,5 +1,4 @@
-use clap::{Parser, Subcommand};
-use std::net::IpAddr;
+use clap::{builder::ArgPredicate, Parser, Subcommand};
 use std::path::PathBuf;
 use tracing::Level;
 
@@ -7,13 +6,22 @@ use tracing::Level;
 #[command(version)]
 pub struct Cli {
     #[arg(short = 'H', long, default_value = "127.0.0.1")]
-    pub address: IpAddr,
+    pub address: String,
     #[arg(short, long)]
     pub port: u16,
     #[command(subcommand)]
     pub command: Commands,
     #[arg(short, long, default_value = "info")]
     pub verbose: Level,
+    #[arg(
+        short,
+        long,
+        required = true,
+        default_value_if("insecure", ArgPredicate::IsPresent, None)
+    )]
+    pub ca_cert: Option<PathBuf>,
+    #[arg(short, long, conflicts_with = "ca_cert")]
+    pub insecure: bool,
 }
 
 #[derive(Subcommand)]

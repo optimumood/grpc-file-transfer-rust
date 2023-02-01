@@ -52,6 +52,7 @@ fn criterion_benchmark_list_files(c: &mut Criterion) {
     let mut cmd = Command::cargo_bin("client").unwrap();
     cmd.args(["--port", &ctx.port.to_string()])
         .args(["--address", "::1"])
+        .arg("--insecure")
         .arg("list");
 
     let mut group = c.benchmark_group("throughput-list_files");
@@ -86,6 +87,7 @@ fn criterion_benchmark_download_file_param(c: &mut Criterion) {
         download_cmd
             .args(["--port", &ctx.port.to_string()])
             .args(["--address", "::1"])
+            .arg("--insecure")
             .arg("download")
             .args(["--file", &file_name])
             .args(["--directory", ctx.client.dir.path().to_str().unwrap()]);
@@ -132,6 +134,7 @@ fn criterion_benchmark_upload_file_param(c: &mut Criterion) {
         upload_cmd
             .args(["--port", &ctx.port.to_string()])
             .args(["--address", "::1"])
+            .arg("--insecure")
             .arg("upload")
             .args(["--file", &file_name])
             .args(["--directory", ctx.client.dir.path().to_str().unwrap()]);

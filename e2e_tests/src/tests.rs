@@ -10,6 +10,14 @@ use utils::compare_files;
 mod e2e_test_context;
 mod utils;
 
+fn get_base_client_cmd(ctx: &E2ETestContext, ip_address: &IpAddr) -> Command {
+    let mut cmd = Command::cargo_bin("client").unwrap();
+    cmd.args(["--port", &ctx.port.to_string()])
+        .args(["--address", &ip_address.to_string()])
+        .arg("--insecure");
+    cmd
+}
+
 #[rstest]
 #[case::ipv4("0.0.0.0")]
 #[case::ipv6("::1")]
@@ -18,12 +26,8 @@ fn test_list_files_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr) 
     ctx.create_test_file(AppType::Server, "abc", "hello");
     ctx.create_test_file(AppType::Server, "xyz", "grpc");
 
-    let mut cmd = Command::cargo_bin("client").unwrap();
-    let assert = cmd
-        .args(["--port", &ctx.port.to_string()])
-        .args(["--address", &ip_address.to_string()])
-        .arg("list")
-        .assert();
+    let mut cmd = get_base_client_cmd(&ctx, &ip_address);
+    let assert = cmd.arg("list").assert();
 
     assert
         .success()
@@ -38,12 +42,8 @@ fn test_list_files_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr) 
 fn test_list_files_empty_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr) {
     ctx.start_server(ip_address);
 
-    let mut cmd = Command::cargo_bin("client").unwrap();
-    let assert = cmd
-        .args(["--port", &ctx.port.to_string()])
-        .args(["--address", &ip_address.to_string()])
-        .arg("list")
-        .assert();
+    let mut cmd = get_base_client_cmd(&ctx, &ip_address);
+    let assert = cmd.arg("list").assert();
 
     assert
         .success()
@@ -59,10 +59,8 @@ fn test_download_file_success(mut ctx: E2ETestContext, #[case] ip_address: IpAdd
     let test_file_name = "abc";
     ctx.create_test_file(AppType::Server, test_file_name, "hello");
 
-    let mut cmd = Command::cargo_bin("client").unwrap();
+    let mut cmd = get_base_client_cmd(&ctx, &ip_address);
     let result = cmd
-        .args(["--port", &ctx.port.to_string()])
-        .args(["--address", &ip_address.to_string()])
         .arg("download")
         .args(["--file", test_file_name])
         .args(["--directory", ctx.client.dir.path().to_str().unwrap()])
@@ -91,10 +89,8 @@ fn test_upload_file_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr)
     let test_file_name = "abc";
     ctx.create_test_file(AppType::Client, test_file_name, "hello");
 
-    let mut cmd = Command::cargo_bin("client").unwrap();
+    let mut cmd = get_base_client_cmd(&ctx, &ip_address);
     let result = cmd
-        .args(["--port", &ctx.port.to_string()])
-        .args(["--address", &ip_address.to_string()])
         .arg("upload")
         .args(["--file", test_file_name])
         .args(["--directory", ctx.client.dir.path().to_str().unwrap()])

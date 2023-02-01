@@ -1,16 +1,17 @@
 use crate::output_print::FilesOutputPrint;
 use anyhow::Result;
-use proto::api::file_service_client::FileServiceClient;
-use proto::api::{upload_file_request, DownloadFileRequest, ListFilesRequest, UploadFileRequest};
-use std::net::IpAddr;
-use std::path::PathBuf;
-use tokio::fs;
-use tokio::io::AsyncReadExt;
-use tokio::io::AsyncWriteExt;
-use tokio::sync::mpsc;
-use tokio_stream::wrappers::ReceiverStream;
-use tokio_stream::StreamExt;
-use tonic::transport::channel::Channel;
+use proto::api::{
+    file_service_client::FileServiceClient, upload_file_request, DownloadFileRequest,
+    ListFilesRequest, UploadFileRequest,
+};
+use std::{net::IpAddr, path::PathBuf};
+use tokio::{
+    fs,
+    io::{AsyncReadExt, AsyncWriteExt},
+    sync::mpsc,
+};
+use tokio_stream::{wrappers::ReceiverStream, StreamExt};
+use tonic::transport::{channel::Channel, Certificate, ClientTlsConfig};
 use tracing::{debug, error, instrument, Instrument};
 
 #[derive(Clone)]
@@ -23,16 +24,47 @@ impl<T> FileClient<T> {
     const CHUNK_SIZE_BYTES: u64 = 1024 * 1024; // 1 MB
 }
 
+fn create_uri(host: &str, port: u16, tls: bool) -> String {
+    let scheme = if tls { "https" } else { "http" };
+
+    if let Ok(ip_addr) = host.parse::<IpAddr>() {
+        return match ip_addr {
+            IpAddr::V4(ipv4) => format!("{}://{}:{}", scheme, ipv4, port),
+            IpAddr::V6(ipv6) => format!("{}://[{}]:{}", scheme, ipv6, port),
+        };
+    }
+
+    format!("{}://{}:{}", scheme, host, port)
+}
+
+fn create_tls_config(ca_cert_pem: &str, domain_name: &str) -> Result<ClientTlsConfig> {
+    let ca = Certificate::from_pem(ca_cert_pem);
+
+    let tls_config = ClientTlsConfig::new()
+        .ca_certificate(ca)
+        .domain_name(domain_name);
+
+    Ok(tls_config)
+}
+
 impl FileClient<Channel> {
     #[instrument]
-    pub async fn new(address: IpAddr, port: u16) -> Result<Self> {
-        let dst = match address {
-            IpAddr::V4(ipv4) => format!("http://{}:{}", ipv4, port),
-            IpAddr::V6(ipv6) => format!("http://[{}]:{}", ipv6, port),
-        };
+    pub async fn new(address: &str, port: u16, ca_cert_pem: Option<&str>) -> Result<Self> {
+        let dst = create_uri(address, port, ca_cert_pem.is_some());
 
         debug!("Connecting to {}", dst);
-        let client = FileServiceClient::connect(dst).await?;
+
+        let mut endpoint = Channel::from_shared(dst)?;
+
+        if let Some(ca_cert_pem) = ca_cert_pem {
+            let tls_config = create_tls_config(ca_cert_pem, address)?;
+            endpoint = endpoint.tls_config(tls_config)?;
+        };
+
+        let channel = endpoint.connect().await?;
+
+        let client = FileServiceClient::new(channel);
+
         debug!("Connected");
         Ok(Self { client })
     }

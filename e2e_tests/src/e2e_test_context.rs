@@ -106,6 +106,7 @@ impl E2ETestContext {
         let server_child = Command::new(server_bin_path)
             .args(["--port", &self.port.to_string()])
             .args(["--address", &server_ip_address.to_string()])
+            .arg("--insecure")
             .args(["--directory", self.server.dir.path().to_str().unwrap()])
             .spawn()
             .expect("server failed to start");

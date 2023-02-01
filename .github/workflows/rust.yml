@@ -35,7 +35,7 @@ jobs:
     - uses: Swatinem/rust-cache@v2
     - uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: 1.67.0
     - name: Install Protoc
       uses: arduino/setup-protoc@v1
       with:
@@ -54,7 +54,7 @@ jobs:
     - uses: Swatinem/rust-cache@v2
     - uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: 1.67.0
     - name: Install Protoc
       uses: arduino/setup-protoc@v1
       with:
@@ -71,7 +71,7 @@ jobs:
     - uses: Swatinem/rust-cache@v2
     - uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: 1.67.0
     - name: Install Protoc
       uses: arduino/setup-protoc@v1
       with:
@@ -88,7 +88,7 @@ jobs:
     - uses: Swatinem/rust-cache@v2
     - uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: 1.67.0
     - name: Install Protoc
       uses: arduino/setup-protoc@v1
       with:

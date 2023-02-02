@@ -1,31 +1,14 @@
-use crate::e2e_test_context::ctx;
-use assert_cmd::Command;
-use e2e_test_context::{AppType, E2ETestContext};
-use predicates::prelude::*;
-use rstest::*;
+use crate::{
+    e2e_test_context::{ctx, AppType, E2ETestContext},
+    utils::{compare_files, get_base_client_cmd},
+};
+use predicates::prelude::{predicate, PredicateStrExt};
+use rstest::rstest;
 use std::net::IpAddr;
 use std::path::PathBuf;
-use utils::compare_files;
 
 mod e2e_test_context;
 mod utils;
-
-fn get_base_client_cmd(ctx: &E2ETestContext, ip_address: &IpAddr, tls: bool) -> Command {
-    let mut cmd = Command::cargo_bin("client").unwrap();
-    cmd.args(["--port", &ctx.port.to_string()]);
-
-    if tls {
-        cmd.args(["--address", "localhost"]).args([
-            "--ca-cert",
-            ctx.client.ca_cert.as_ref().unwrap().to_str().unwrap(),
-        ]);
-    } else {
-        cmd.args(["--address", &ip_address.to_string()])
-            .arg("--insecure");
-    }
-
-    cmd
-}
 
 #[rstest]
 #[case::ipv4_non_tls("0.0.0.0", false)]

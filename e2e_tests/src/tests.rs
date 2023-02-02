@@ -17,7 +17,7 @@ mod utils;
 #[case::ipv6_tls("::1", true)]
 fn test_list_files_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr, #[case] tls: bool) {
     if tls {
-        ctx.gen_certs();
+        ctx.gen_all_creds();
     }
     ctx.start_server(ip_address, tls);
     ctx.create_test_file(AppType::Server, "abc", "hello");
@@ -44,7 +44,7 @@ fn test_list_files_empty_success(
     #[case] tls: bool,
 ) {
     if tls {
-        ctx.gen_certs();
+        ctx.gen_all_creds();
     }
     ctx.start_server(ip_address, tls);
 
@@ -67,7 +67,7 @@ fn test_download_file_success(
     #[case] tls: bool,
 ) {
     if tls {
-        ctx.gen_certs();
+        ctx.gen_all_creds();
     }
     ctx.start_server(ip_address, tls);
 
@@ -106,7 +106,7 @@ fn test_upload_file_success(
     #[case] tls: bool,
 ) {
     if tls {
-        ctx.gen_certs();
+        ctx.gen_all_creds();
     }
     ctx.start_server(ip_address, tls);
 

@@ -12,7 +12,24 @@ pub async fn client_main(args: &Cli) -> Result<()> {
         ca_cert_pem_str = Some(std::fs::read_to_string(ca_cert_pem)?);
     }
 
-    let mut client = FileClient::new(&args.address, args.port, ca_cert_pem_str.as_deref()).await?;
+    let mut cert_pem_str = None;
+    if let Some(cert_pem) = &args.cert {
+        cert_pem_str = Some(std::fs::read_to_string(cert_pem)?);
+    }
+
+    let mut key_pem_str = None;
+    if let Some(key_pem) = &args.key {
+        key_pem_str = Some(std::fs::read_to_string(key_pem)?);
+    }
+
+    let mut client = FileClient::new(
+        &args.address,
+        args.port,
+        ca_cert_pem_str.as_deref(),
+        cert_pem_str.as_deref(),
+        key_pem_str.as_deref(),
+    )
+    .await?;
 
     match &args.command {
         List => &mut client.list_files().await?,

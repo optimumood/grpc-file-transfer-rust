@@ -14,21 +14,23 @@ pub struct Cli {
     #[arg(short, long, default_value = "info")]
     pub verbose: Level,
     #[arg(
-        short,
         long,
-        requires = "key",
         required = true,
         default_value_if("insecure", ArgPredicate::IsPresent, None)
     )]
     pub cert: Option<PathBuf>,
     #[arg(
-        short,
         long,
-        requires = "cert",
         required = true,
         default_value_if("insecure", ArgPredicate::IsPresent, None)
     )]
     pub key: Option<PathBuf>,
-    #[arg(short, long, conflicts_with_all = ["key", "cert"])]
+    #[arg(
+        long,
+        required = true,
+        default_value_if("insecure", ArgPredicate::IsPresent, None)
+    )]
+    pub ca_cert: Option<PathBuf>,
+    #[arg(short, long, conflicts_with_all = ["key", "cert", "ca_cert"])]
     pub insecure: bool,
 }

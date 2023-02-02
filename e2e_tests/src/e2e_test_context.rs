@@ -14,26 +14,38 @@ use tonic::transport::Channel;
 pub struct E2ETestContext {
     pub client: Client,
     pub server: Server,
+    pub creds_dir: ManuallyDrop<TempDir>,
     pub port: u16,
 }
 
 pub struct Client {
     pub dir: ManuallyDrop<TempDir>,
     pub files: Vec<TestFile>,
-    pub ca_cert: Option<PathBuf>,
+    pub creds: Option<Credentials>,
 }
 
 pub struct Server {
     pub dir: ManuallyDrop<TempDir>,
     pub process: Option<Child>,
     pub files: Vec<TestFile>,
-    pub cert: Option<PathBuf>,
-    pub key: Option<PathBuf>,
+    pub creds: Option<Credentials>,
 }
 
 pub struct TestFile {
     pub handle: File,
     pub abs_path: PathBuf,
+}
+
+#[derive(Default)]
+pub struct Credentials {
+    pub ca_cert: PathBuf,
+    pub identity: Identity,
+}
+
+#[derive(Default)]
+pub struct Identity {
+    pub cert: PathBuf,
+    pub key: PathBuf,
 }
 
 pub enum AppType {
@@ -52,6 +64,8 @@ impl E2ETestContext {
             TempDir::new("my_directory_prefix").expect("Failed to create temporary directory");
         let client_dir =
             TempDir::new("my_directory_prefix").expect("Failed to create temporary directory");
+        let creds_dir =
+            TempDir::new("my_directory_prefix").expect("Failed to create temporary directory");
 
         let port = portpicker::pick_unused_port().expect("No ports free");
 
@@ -59,18 +73,18 @@ impl E2ETestContext {
             dir: ManuallyDrop::new(server_dir),
             files: vec![],
             process: None,
-            cert: None,
-            key: None,
+            creds: None,
         };
         let client = Client {
             dir: ManuallyDrop::new(client_dir),
             files: vec![],
-            ca_cert: None,
+            creds: None,
         };
 
         E2ETestContext {
             client,
             server,
+            creds_dir: ManuallyDrop::new(creds_dir),
             port,
         }
     }
@@ -81,6 +95,7 @@ impl E2ETestContext {
                 eprintln!("failed to kill server process: {err}");
             }
         }
+
         let server_dir;
         unsafe {
             server_dir = ManuallyDrop::take(&mut self.server.dir);
@@ -96,6 +111,14 @@ impl E2ETestContext {
         if let Err(err) = client_dir.close() {
             eprintln!("failed to delete temporary client directory: {err}");
         }
+
+        let creds_dir;
+        unsafe {
+            creds_dir = ManuallyDrop::take(&mut self.creds_dir);
+        }
+        if let Err(err) = creds_dir.close() {
+            eprintln!("failed to delete temporary credentials directory: {err}");
+        }
     }
 }
 
@@ -108,9 +131,8 @@ impl Drop for E2ETestContext {
 impl E2ETestContext {
     const SERVER_BIN_NAME: &str = "server";
     const CA_CERT_NAME: &str = "ca-cert.pem";
-    const SERVER_CERT_NAME: &str = "server-cert.pem";
-    const SERVER_KEY_NAME: &str = "server-key.pem";
-    const CERTS_DIR: &str = "certs";
+    const CERT_NAME: &str = "cert.pem";
+    const KEY_NAME: &str = "key.pem";
 
     pub fn start_server(&mut self, server_ip_address: IpAddr, tls: bool) {
         let server_bin_path = cargo_bin(Self::SERVER_BIN_NAME);
@@ -122,11 +144,41 @@ impl E2ETestContext {
             .args(["--directory", self.server.dir.path().to_str().unwrap()]);
 
         if tls {
-            server_cmd.args(["--key", self.server.key.as_ref().unwrap().to_str().unwrap()]);
-            server_cmd.args([
-                "--cert",
-                self.server.cert.as_ref().unwrap().to_str().unwrap(),
-            ]);
+            server_cmd
+                .args([
+                    "--key",
+                    self.server
+                        .creds
+                        .as_ref()
+                        .unwrap()
+                        .identity
+                        .key
+                        .as_path()
+                        .to_str()
+                        .unwrap(),
+                ])
+                .args([
+                    "--cert",
+                    self.server
+                        .creds
+                        .as_ref()
+                        .unwrap()
+                        .identity
+                        .cert
+                        .as_path()
+                        .to_str()
+                        .unwrap(),
+                ])
+                .args([
+                    "--ca-cert",
+                    self.client
+                        .creds
+                        .as_ref()
+                        .unwrap()
+                        .ca_cert
+                        .to_str()
+                        .unwrap(),
+                ]);
         } else {
             server_cmd.arg("--insecure");
         }
@@ -194,31 +246,44 @@ impl E2ETestContext {
         }
     }
 
-    pub fn gen_certs(&mut self) {
+    pub fn gen_all_creds(&mut self) {
+        self.gen_creds(AppType::Client);
+        self.gen_creds(AppType::Server);
+    }
+
+    fn gen_creds(&mut self, app_type: AppType) {
+        let mut creds = Credentials::default();
+
         let subject_alt_names = vec!["localhost".to_string()];
         let cert = generate_simple_self_signed(subject_alt_names).unwrap();
 
-        let mut client_certs_path = PathBuf::from(self.client.dir.path());
-        client_certs_path.push(Self::CERTS_DIR);
-        fs::create_dir(&client_certs_path).unwrap();
+        let prefix = match app_type {
+            AppType::Client => "client",
+            AppType::Server => "server",
+        };
 
-        let mut server_certs_path = PathBuf::from(self.server.dir.path());
-        server_certs_path.push(Self::CERTS_DIR);
-        fs::create_dir(&server_certs_path).unwrap();
+        let mut certs_path = PathBuf::from(self.creds_dir.path());
+        certs_path.push(prefix);
+        fs::create_dir(&certs_path).unwrap();
 
-        let mut client_ca_cert_path = client_certs_path.clone();
-        client_ca_cert_path.push(Self::CA_CERT_NAME);
-        fs::write(&client_ca_cert_path, cert.serialize_pem().unwrap()).unwrap();
-        self.client.ca_cert = Some(client_ca_cert_path);
+        let mut ca_cert_path = certs_path.clone();
+        ca_cert_path.push(Self::CA_CERT_NAME);
+        fs::write(&ca_cert_path, cert.serialize_pem().unwrap()).unwrap();
+        creds.ca_cert = ca_cert_path;
 
-        let mut server_cert_path = server_certs_path.clone();
-        server_cert_path.push(Self::SERVER_CERT_NAME);
-        fs::write(&server_cert_path, cert.serialize_pem().unwrap()).unwrap();
-        self.server.cert = Some(server_cert_path);
+        let mut cert_path = certs_path.clone();
+        cert_path.push(Self::CERT_NAME);
+        fs::write(&cert_path, cert.serialize_pem().unwrap()).unwrap();
+        creds.identity.cert = cert_path;
 
-        let mut server_key_path = server_certs_path.clone();
-        server_key_path.push(Self::SERVER_KEY_NAME);
-        fs::write(&server_key_path, cert.serialize_private_key_pem()).unwrap();
-        self.server.key = Some(server_key_path);
+        let mut key_path = certs_path.clone();
+        key_path.push(Self::KEY_NAME);
+        fs::write(&key_path, cert.serialize_private_key_pem()).unwrap();
+        creds.identity.key = key_path;
+
+        match app_type {
+            AppType::Client => self.client.creds = Some(creds),
+            AppType::Server => self.server.creds = Some(creds),
+        };
     }
 }

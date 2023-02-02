@@ -11,7 +11,7 @@ use tokio::{
     sync::mpsc,
 };
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
-use tonic::transport::{channel::Channel, Certificate, ClientTlsConfig};
+use tonic::transport::{channel::Channel, Certificate, ClientTlsConfig, Identity};
 use tracing::{debug, error, instrument, Instrument};
 
 #[derive(Clone)]
@@ -37,29 +37,44 @@ fn create_uri(host: &str, port: u16, tls: bool) -> String {
     format!("{scheme}://{host}:{port}")
 }
 
-fn create_tls_config(ca_cert_pem: &str, domain_name: &str) -> Result<ClientTlsConfig> {
+fn create_tls_config(
+    ca_cert_pem: &str,
+    domain_name: &str,
+    cert: &str,
+    key: &str,
+) -> Result<ClientTlsConfig> {
     let ca = Certificate::from_pem(ca_cert_pem);
+    let identity = Identity::from_pem(cert, key);
 
     let tls_config = ClientTlsConfig::new()
         .ca_certificate(ca)
-        .domain_name(domain_name);
+        .domain_name(domain_name)
+        .identity(identity);
 
     Ok(tls_config)
 }
 
 impl FileClient<Channel> {
     #[instrument]
-    pub async fn new(address: &str, port: u16, ca_cert_pem: Option<&str>) -> Result<Self> {
-        let dst = create_uri(address, port, ca_cert_pem.is_some());
+    pub async fn new(
+        address: &str,
+        port: u16,
+        ca_cert_pem: Option<&str>,
+        cert: Option<&str>,
+        key: Option<&str>,
+    ) -> Result<Self> {
+        let enable_tls = ca_cert_pem.is_some() && cert.is_some() && key.is_some();
+        let dst = create_uri(address, port, enable_tls);
 
         debug!("Connecting to {}", dst);
 
         let mut endpoint = Channel::from_shared(dst)?;
 
-        if let Some(ca_cert_pem) = ca_cert_pem {
-            let tls_config = create_tls_config(ca_cert_pem, address)?;
+        if enable_tls {
+            let tls_config =
+                create_tls_config(ca_cert_pem.unwrap(), address, cert.unwrap(), key.unwrap())?;
             endpoint = endpoint.tls_config(tls_config)?;
-        };
+        }
 
         let channel = endpoint.connect().await?;
 

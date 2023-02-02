@@ -64,7 +64,7 @@ fn criterion_benchmark_list_files(c: &mut Criterion) {
 
 fn criterion_benchmark_list_files_tls(c: &mut Criterion) {
     let mut ctx = E2ETestContext::setup();
-    ctx.gen_certs();
+    ctx.gen_all_creds();
     ctx.start_server("::1".parse().unwrap(), true);
     ctx.create_test_file(AppType::Server, "abc", "hello");
     ctx.create_test_file(AppType::Server, "xyz", "grpc");
@@ -124,7 +124,7 @@ fn criterion_benchmark_download_file(c: &mut Criterion) {
 
 fn criterion_benchmark_download_file_tls(c: &mut Criterion) {
     let mut ctx = E2ETestContext::setup();
-    ctx.gen_certs();
+    ctx.gen_all_creds();
     ctx.start_server("::1".parse().unwrap(), true);
 
     let mut group = c.benchmark_group("throughput-download_file_tls");
@@ -213,7 +213,7 @@ fn criterion_benchmark_upload_file(c: &mut Criterion) {
 
 fn criterion_benchmark_upload_file_tls(c: &mut Criterion) {
     let mut ctx = E2ETestContext::setup();
-    ctx.gen_certs();
+    ctx.gen_all_creds();
     ctx.start_server("::1".parse().unwrap(), true);
 
     let mut group = c.benchmark_group("throughput-upload_file_tls");

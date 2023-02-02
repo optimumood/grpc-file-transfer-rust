@@ -14,10 +14,35 @@ pub fn get_base_client_cmd(ctx: &E2ETestContext, ip_address: &IpAddr, tls: bool)
     cmd.args(["--port", &ctx.port.to_string()]);
 
     if tls {
-        cmd.args(["--address", "localhost"]).args([
-            "--ca-cert",
-            ctx.client.ca_cert.as_ref().unwrap().to_str().unwrap(),
-        ]);
+        cmd.args(["--address", "localhost"])
+            .args([
+                "--ca-cert",
+                ctx.server.creds.as_ref().unwrap().ca_cert.to_str().unwrap(),
+            ])
+            .args([
+                "--key",
+                ctx.client
+                    .creds
+                    .as_ref()
+                    .unwrap()
+                    .identity
+                    .key
+                    .as_path()
+                    .to_str()
+                    .unwrap(),
+            ])
+            .args([
+                "--cert",
+                ctx.client
+                    .creds
+                    .as_ref()
+                    .unwrap()
+                    .identity
+                    .cert
+                    .as_path()
+                    .to_str()
+                    .unwrap(),
+            ]);
     } else {
         cmd.args(["--address", &ip_address.to_string()])
             .arg("--insecure");

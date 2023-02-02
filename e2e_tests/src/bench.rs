@@ -45,7 +45,7 @@ fn compare_files_on_disk(left: &Path, right: &Path) {
 
 fn criterion_benchmark_list_files(c: &mut Criterion) {
     let mut ctx = E2ETestContext::setup();
-    ctx.start_server("::1".parse().unwrap());
+    ctx.start_server("::1".parse().unwrap(), false);
     ctx.create_test_file(AppType::Server, "abc", "hello");
     ctx.create_test_file(AppType::Server, "xyz", "grpc");
 
@@ -63,7 +63,7 @@ fn criterion_benchmark_list_files(c: &mut Criterion) {
 
 fn criterion_benchmark_download_file_param(c: &mut Criterion) {
     let mut ctx = E2ETestContext::setup();
-    ctx.start_server("::1".parse().unwrap());
+    ctx.start_server("::1".parse().unwrap(), false);
 
     let mut group = c.benchmark_group("throughput-download_file");
 
@@ -110,7 +110,7 @@ fn criterion_benchmark_download_file_param(c: &mut Criterion) {
 
 fn criterion_benchmark_upload_file_param(c: &mut Criterion) {
     let mut ctx = E2ETestContext::setup();
-    ctx.start_server("::1".parse().unwrap());
+    ctx.start_server("::1".parse().unwrap(), false);
 
     let mut group = c.benchmark_group("throughput-upload_file");
 

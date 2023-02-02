@@ -10,23 +10,37 @@ use utils::compare_files;
 mod e2e_test_context;
 mod utils;
 
-fn get_base_client_cmd(ctx: &E2ETestContext, ip_address: &IpAddr) -> Command {
+fn get_base_client_cmd(ctx: &E2ETestContext, ip_address: &IpAddr, tls: bool) -> Command {
     let mut cmd = Command::cargo_bin("client").unwrap();
-    cmd.args(["--port", &ctx.port.to_string()])
-        .args(["--address", &ip_address.to_string()])
-        .arg("--insecure");
+    cmd.args(["--port", &ctx.port.to_string()]);
+
+    if tls {
+        cmd.args(["--address", "localhost"]).args([
+            "--ca-cert",
+            ctx.client.ca_cert.as_ref().unwrap().to_str().unwrap(),
+        ]);
+    } else {
+        cmd.args(["--address", &ip_address.to_string()])
+            .arg("--insecure");
+    }
+
     cmd
 }
 
 #[rstest]
-#[case::ipv4("0.0.0.0")]
-#[case::ipv6("::1")]
-fn test_list_files_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr) {
-    ctx.start_server(ip_address);
+#[case::ipv4_non_tls("0.0.0.0", false)]
+#[case::ipv6_non_tls("::1", false)]
+#[case::ipv4_tls("0.0.0.0", true)]
+#[case::ipv6_tls("::1", true)]
+fn test_list_files_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr, #[case] tls: bool) {
+    if tls {
+        ctx.gen_certs();
+    }
+    ctx.start_server(ip_address, tls);
     ctx.create_test_file(AppType::Server, "abc", "hello");
     ctx.create_test_file(AppType::Server, "xyz", "grpc");
 
-    let mut cmd = get_base_client_cmd(&ctx, &ip_address);
+    let mut cmd = get_base_client_cmd(&ctx, &ip_address, tls);
     let assert = cmd.arg("list").assert();
 
     assert
@@ -37,12 +51,21 @@ fn test_list_files_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr) 
 }
 
 #[rstest]
-#[case::ipv4("0.0.0.0")]
-#[case::ipv6("::1")]
-fn test_list_files_empty_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr) {
-    ctx.start_server(ip_address);
+#[case::ipv4_non_tls("0.0.0.0", false)]
+#[case::ipv6_non_tls("::1", false)]
+#[case::ipv4_tls("0.0.0.0", true)]
+#[case::ipv6_tls("::1", true)]
+fn test_list_files_empty_success(
+    mut ctx: E2ETestContext,
+    #[case] ip_address: IpAddr,
+    #[case] tls: bool,
+) {
+    if tls {
+        ctx.gen_certs();
+    }
+    ctx.start_server(ip_address, tls);
 
-    let mut cmd = get_base_client_cmd(&ctx, &ip_address);
+    let mut cmd = get_base_client_cmd(&ctx, &ip_address, tls);
     let assert = cmd.arg("list").assert();
 
     assert
@@ -51,15 +74,24 @@ fn test_list_files_empty_success(mut ctx: E2ETestContext, #[case] ip_address: Ip
 }
 
 #[rstest]
-#[case::ipv4("0.0.0.0")]
-#[case::ipv6("::1")]
-fn test_download_file_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr) {
-    ctx.start_server(ip_address);
+#[case::ipv4_non_tls("0.0.0.0", false)]
+#[case::ipv6_non_tls("::1", false)]
+#[case::ipv4_tls("0.0.0.0", true)]
+#[case::ipv6_tls("::1", true)]
+fn test_download_file_success(
+    mut ctx: E2ETestContext,
+    #[case] ip_address: IpAddr,
+    #[case] tls: bool,
+) {
+    if tls {
+        ctx.gen_certs();
+    }
+    ctx.start_server(ip_address, tls);
 
     let test_file_name = "abc";
     ctx.create_test_file(AppType::Server, test_file_name, "hello");
 
-    let mut cmd = get_base_client_cmd(&ctx, &ip_address);
+    let mut cmd = get_base_client_cmd(&ctx, &ip_address, tls);
     let result = cmd
         .arg("download")
         .args(["--file", test_file_name])
@@ -81,15 +113,24 @@ fn test_download_file_success(mut ctx: E2ETestContext, #[case] ip_address: IpAdd
 }
 
 #[rstest]
-#[case::ipv4("0.0.0.0")]
-#[case::ipv6("::1")]
-fn test_upload_file_success(mut ctx: E2ETestContext, #[case] ip_address: IpAddr) {
-    ctx.start_server(ip_address);
+#[case::ipv4_non_tls("0.0.0.0", false)]
+#[case::ipv6_non_tls("::1", false)]
+#[case::ipv4_tls("0.0.0.0", true)]
+#[case::ipv6_tls("::1", true)]
+fn test_upload_file_success(
+    mut ctx: E2ETestContext,
+    #[case] ip_address: IpAddr,
+    #[case] tls: bool,
+) {
+    if tls {
+        ctx.gen_certs();
+    }
+    ctx.start_server(ip_address, tls);
 
     let test_file_name = "abc";
     ctx.create_test_file(AppType::Client, test_file_name, "hello");
 
-    let mut cmd = get_base_client_cmd(&ctx, &ip_address);
+    let mut cmd = get_base_client_cmd(&ctx, &ip_address, tls);
     let result = cmd
         .arg("upload")
         .args(["--file", test_file_name])

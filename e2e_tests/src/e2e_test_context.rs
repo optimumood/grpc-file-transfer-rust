@@ -1,6 +1,7 @@
 use assert_cmd::cargo::cargo_bin;
+use rcgen::generate_simple_self_signed;
 use rstest::*;
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::Write;
 use std::mem::ManuallyDrop;
 use std::net::IpAddr;
@@ -19,12 +20,15 @@ pub struct E2ETestContext {
 pub struct Client {
     pub dir: ManuallyDrop<TempDir>,
     pub files: Vec<TestFile>,
+    pub ca_cert: Option<PathBuf>,
 }
 
 pub struct Server {
     pub dir: ManuallyDrop<TempDir>,
     pub process: Option<Child>,
     pub files: Vec<TestFile>,
+    pub cert: Option<PathBuf>,
+    pub key: Option<PathBuf>,
 }
 
 pub struct TestFile {
@@ -55,10 +59,13 @@ impl E2ETestContext {
             dir: ManuallyDrop::new(server_dir),
             files: vec![],
             process: None,
+            cert: None,
+            key: None,
         };
         let client = Client {
             dir: ManuallyDrop::new(client_dir),
             files: vec![],
+            ca_cert: None,
         };
 
         E2ETestContext {
@@ -100,16 +107,31 @@ impl Drop for E2ETestContext {
 
 impl E2ETestContext {
     const SERVER_BIN_NAME: &str = "server";
+    const CA_CERT_NAME: &str = "ca-cert.pem";
+    const SERVER_CERT_NAME: &str = "server-cert.pem";
+    const SERVER_KEY_NAME: &str = "server-key.pem";
+    const CERTS_DIR: &str = "certs";
 
-    pub fn start_server(&mut self, server_ip_address: IpAddr) {
+    pub fn start_server(&mut self, server_ip_address: IpAddr, tls: bool) {
         let server_bin_path = cargo_bin(Self::SERVER_BIN_NAME);
-        let server_child = Command::new(server_bin_path)
+
+        let mut server_cmd = Command::new(server_bin_path);
+        server_cmd
             .args(["--port", &self.port.to_string()])
             .args(["--address", &server_ip_address.to_string()])
-            .arg("--insecure")
-            .args(["--directory", self.server.dir.path().to_str().unwrap()])
-            .spawn()
-            .expect("server failed to start");
+            .args(["--directory", self.server.dir.path().to_str().unwrap()]);
+
+        if tls {
+            server_cmd.args(["--key", self.server.key.as_ref().unwrap().to_str().unwrap()]);
+            server_cmd.args([
+                "--cert",
+                self.server.cert.as_ref().unwrap().to_str().unwrap(),
+            ]);
+        } else {
+            server_cmd.arg("--insecure");
+        }
+
+        let server_child = server_cmd.spawn().expect("server failed to start");
 
         self.wait_for_server(&server_ip_address);
 
@@ -170,5 +192,33 @@ impl E2ETestContext {
             AppType::Client => self.client.files.push(test_file),
             AppType::Server => self.server.files.push(test_file),
         }
+    }
+
+    pub fn gen_certs(&mut self) {
+        let subject_alt_names = vec!["localhost".to_string()];
+        let cert = generate_simple_self_signed(subject_alt_names).unwrap();
+
+        let mut client_certs_path = PathBuf::from(self.client.dir.path());
+        client_certs_path.push(Self::CERTS_DIR);
+        fs::create_dir(&client_certs_path).unwrap();
+
+        let mut server_certs_path = PathBuf::from(self.server.dir.path());
+        server_certs_path.push(Self::CERTS_DIR);
+        fs::create_dir(&server_certs_path).unwrap();
+
+        let mut client_ca_cert_path = client_certs_path.clone();
+        client_ca_cert_path.push(Self::CA_CERT_NAME);
+        fs::write(&client_ca_cert_path, cert.serialize_pem().unwrap()).unwrap();
+        self.client.ca_cert = Some(client_ca_cert_path);
+
+        let mut server_cert_path = server_certs_path.clone();
+        server_cert_path.push(Self::SERVER_CERT_NAME);
+        fs::write(&server_cert_path, cert.serialize_pem().unwrap()).unwrap();
+        self.server.cert = Some(server_cert_path);
+
+        let mut server_key_path = server_certs_path.clone();
+        server_key_path.push(Self::SERVER_KEY_NAME);
+        fs::write(&server_key_path, cert.serialize_private_key_pem()).unwrap();
+        self.server.key = Some(server_key_path);
     }
 }

@@ -5,7 +5,7 @@
 
 ---
 
-> gRPC file server and client written in Rust language.
+> gRPC file sharing server and client with mTLS (mutual Transport Layer Security), which provides communications security over a computer network.
 
 ## :scroll: Table of Contents
 - [:thinking: About](#about)
@@ -22,6 +22,8 @@
 
 ## :thinking: About <a name = "about"></a>
 This project consists of gRPC server and client applications.
+Server and client are authenticated by mTLS (mutual Transport Layer Security) cryptographic protocol using server and client certificates.
+TLS encrypts data transfer between client and server so that external parties cannot spy on the communications.
 
 Available features:
 - list available files on server
@@ -88,21 +90,25 @@ Below are presented example commands.
 - Server help command
 ```shell
 $ server --help
-Usage: server [OPTIONS] --directory <DIRECTORY>
+Usage: server [OPTIONS] --directory <DIRECTORY> --cert <CERT> --key <KEY> --ca-cert <CA_CERT>
 
 Options:
   -d, --directory <DIRECTORY>
   -H, --address <ADDRESS>      [default: 127.0.0.1]
   -p, --port <PORT>
   -v, --verbose <VERBOSE>      [default: info]
-  -h, --help                   Print help
-  -V, --version                Print version
+      --cert <CERT>
+      --key <KEY>
+      --ca-cert <CA_CERT>
+  -i, --insecure
+  -h, --help                   Print help information
+  -V, --version                Print version information
 ```
 
 - Client help command
 ```shell
 $ client --help
-Usage: client [OPTIONS] --port <PORT> <COMMAND>
+Usage: client [OPTIONS] --port <PORT> --cert <CERT> --key <KEY> --ca-cert <CA_CERT> <COMMAND>
 
 Commands:
   download
@@ -114,22 +120,39 @@ Options:
   -H, --address <ADDRESS>  [default: 127.0.0.1]
   -p, --port <PORT>
   -v, --verbose <VERBOSE>  [default: info]
-  -h, --help               Print help
-  -V, --version            Print version
+      --cert <CERT>
+      --key <KEY>
+      --ca-cert <CA_CERT>
+  -i, --insecure
+  -h, --help               Print help information
+  -V, --version            Print version information
 ```
 
-- Run server on IPv6 localhost address with 50051 port and /tmp/server path as server directory.
-```shell
-$ server --directory /tmp/server -p 50051 --address ::1
-```
+- Run server on IPv6 localhost address with 50051 port and /tmp/server path as server directory:
+  - mTLS secured
+  ```shell
+  $ server --directory /tmp/server -p 50051 --address ::1 --cert secrets/server-cert.pem --key secrets/server-key.pem --ca-cert secrets/ca-cert.pem
+  ```
+  - insecure
+  ```shell
+  $ server --directory /tmp/server -p 50051 --address ::1 --insecure
+  ```
 
 - List files command
-```shell
-$ client --port 50051 --address ::1 list
- File name  Size
- abc        12B
- abc2       0B
-```
+  - mTLS secured
+  ```shell
+  $ client --port 50051 --address localhost --cert secrets/client-cert.pem --key secrets/client-key.pem --ca-cert secrets/ca-cert.pem list
+  File name  Size
+  abc        12B
+  abc2       0B
+  ```
+  - insecure
+  ```shell
+  $ client --port 50051 --address localhost --insecure list
+  File name  Size
+  abc        12B
+  abc2       0B
+  ```
 
 ## :arrows_counterclockwise: Diagrams <a name = "diagrams"></a>
 ### High level sequence diagrams
